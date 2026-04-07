@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Building2, Mail, Lock, Phone, ChevronDown, Search, Filter, Bell } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const OrganizerRegistration = () => {
   const [formData, setFormData] = useState({
@@ -153,6 +154,16 @@ const OrganizerRegistration = () => {
               >
                 {loading ? "Registering..." : "Create Organizer Account"}
               </button>
+
+            <p className="text-center text-sm text-gray-500">
+              Already have an account?{" "}
+              <Link
+                to="/student/login"
+                className="text-unity-blue font-semibold hover:underline"
+              >
+                Login
+              </Link>
+            </p>
             </form>
           </div>
         </section>

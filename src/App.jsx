@@ -3,7 +3,9 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import OrganizerRegistration from './pages/Organizer/OrganizerRegistration';
 import PendingReview from './pages/Organizer/PendingReview';
 import StudentRegistration from './pages/Student/StudentRegistration';
-import EventDiscovery from './pages/Student/EventDiscovery'; // create this page or replace with your main student page
+import EventDiscovery from './pages/Student/EventDiscovery';
+import AdminRegistration from './pages/Admin/AdminRegistration';
+import AdminDashboard from './pages/Admin/AdminDashboard';
 
 function App() {
   return (
@@ -16,6 +18,10 @@ function App() {
         {/* Student Routes */}
         <Route path="/register-student" element={<StudentRegistration />} />
         <Route path="/eventDiscovery" element={<EventDiscovery />} /> {/* main student landing/dashboard */}
+
+        {/* Admin Routes */}
+        <Route path="/register-admin" element={<AdminRegistration />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
         {/* Login Routes */}
         {/* <Route path="/" element={<Login />} /> */}
