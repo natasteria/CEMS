@@ -6,6 +6,8 @@ import StudentRegistration from './pages/Student/StudentRegistration';
 import EventDiscovery from './pages/Student/EventDiscovery';
 import AdminRegistration from './pages/Admin/AdminRegistration';
 import AdminDashboard from './pages/Admin/AdminDashboard';
+import Login from './pages/Login';
+import OrganizerDashboard from './pages/Organizer/OrganizerDashboard';
 
 function App() {
   return (
@@ -13,18 +15,19 @@ function App() {
       <Routes>
         {/* Organizer Routes */}
         <Route path="/register-organizer" element={<OrganizerRegistration />} />
-        <Route path="/organizer/pending" element={<PendingReview />} />
+        <Route path="/organizer-pending" element={<PendingReview />} />
+        <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
 
         {/* Student Routes */}
         <Route path="/register-student" element={<StudentRegistration />} />
-        <Route path="/eventDiscovery" element={<EventDiscovery />} /> {/* main student landing/dashboard */}
+        <Route path="/event-discovery" element={<EventDiscovery />} /> {/* main student landing/dashboard */}
 
         {/* Admin Routes */}
         <Route path="/register-admin" element={<AdminRegistration />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin-dashboard" element={<AdminDashboard />} />
 
         {/* Login Routes */}
-        {/* <Route path="/" element={<Login />} /> */}
+        <Route path="/" element={<Login />} />
 
         {/* Optional: redirect unknown routes */}
         <Route path="*" element={<div>404 Not Found</div>} />

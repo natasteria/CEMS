@@ -264,7 +264,7 @@ const StudentRegistration = () => {
             <p className="text-center text-sm text-gray-500">
               Already have an account?{" "}
               <Link
-                to="/student/login"
+                to="/"
                 className="text-unity-blue font-semibold hover:underline"
               >
                 Login
