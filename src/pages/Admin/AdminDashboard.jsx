@@ -1,36 +1,43 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { Loader2, User, Mail, Phone } from 'lucide-react';
+import { Loader2, User, Calendar, Users, Shield } from 'lucide-react';
+
+// Pages that render inside main area
+import AdminProfile from './DashBoardComponents/AdminProfile';
+// import ManageEvents from './components/ManageEvents';
+// import ManageOrganizers from './components/ManageOrganizers';
+// import ManageStudents from './components/ManageStudents';
 
 const AdminDashboard = () => {
+
+  const [currentTab, setCurrentTab] = useState('profile');
   const [adminProfile, setAdminProfile] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+
     let isMounted = true;
 
     const fetchAdminData = async () => {
+
       try {
+
         setLoading(true);
 
-        // Small delay for UX consistency
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Get logged in user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        const { data: { user }, error: userError } =
+          await supabase.auth.getUser();
 
         if (userError) throw userError;
         if (!user) throw new Error("User not authenticated");
 
-        // Fetch profile directly
         const { data, error: profileError } = await supabase
           .from('profiles')
           .select(`
             first_name,
             last_name,
-            email,
-            phone_number
+            email
           `)
           .eq('id', user.id)
           .single();
@@ -42,10 +49,19 @@ const AdminDashboard = () => {
         }
 
       } catch (err) {
-        if (isMounted) setError(err.message);
+
+        if (isMounted) {
+          setError(err.message);
+        }
+
       } finally {
-        if (isMounted) setLoading(false);
+
+        if (isMounted) {
+          setLoading(false);
+        }
+
       }
+
     };
 
     fetchAdminData();
@@ -53,80 +69,133 @@ const AdminDashboard = () => {
     return () => {
       isMounted = false;
     };
+
   }, []);
 
-  // Loading screen
+  const renderContent = () => {
+
+    switch (currentTab) {
+
+      case 'profile':
+        return <AdminProfile adminProfile={adminProfile} />;
+
+      case 'events':
+        return <ManageEvents />;
+
+      case 'organizers':
+        return <ManageOrganizers />;
+
+      case 'students':
+        return <ManageStudents />;
+
+      default:
+        return <AdminProfile adminProfile={adminProfile} />;
+    }
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-        <div className="flex flex-col items-center">
-          <Loader2 className="w-12 h-12 text-[#003366] animate-spin mb-4" />
-          <p className="text-slate-500 font-medium animate-pulse">
-            Loading Administrator Profile...
-          </p>
-        </div>
+      <div className="flex h-screen items-center justify-center bg-white">
+        <Loader2 className="w-10 h-10 animate-spin text-[#003366]" />
       </div>
     );
   }
 
-  if (error) return <div className="p-10 text-red-500">Error: {error}</div>;
-  if (!adminProfile) return <div className="p-10">No profile found.</div>;
+  if (error) {
+    return (
+      <div className="p-10 text-red-500">
+        Error: {error}
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8">
-      <div className="max-w-4xl mx-auto">
 
-        <h1 className="text-3xl font-bold text-[#003366] mb-6">
-          Admin Dashboard
-        </h1>
+    <div className="flex h-screen w-full overflow-hidden font-sans bg-white text-slate-900">
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
-          <h2 className="text-xl font-semibold mb-6 border-b pb-4">
-            Personal Information
+      {/* Sidebar */}
+      <aside className="w-64 bg-[#003366] text-white flex flex-col">
+
+        {/* Admin Info */}
+        <div className="p-6 border-b border-white/10">
+
+          <h2 className="text-lg font-semibold">
+            {adminProfile.first_name} {adminProfile.last_name}
           </h2>
 
-          <div className="space-y-4">
+          <p className="text-sm text-white/70">
+            {adminProfile.email}
+          </p>
 
-            <div className="flex items-center gap-4">
-              <div className="bg-slate-100 p-2 rounded-lg">
-                <User className="w-5 h-5 text-slate-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">Full Name</p>
-                <p className="font-medium text-slate-800">
-                  {adminProfile.first_name} {adminProfile.last_name}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="bg-slate-100 p-2 rounded-lg">
-                <Mail className="w-5 h-5 text-slate-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">Email Address</p>
-                <p className="font-medium text-slate-800">
-                  {adminProfile.email}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="bg-slate-100 p-2 rounded-lg">
-                <Phone className="w-5 h-5 text-slate-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">Phone Number</p>
-                <p className="font-medium text-slate-800">
-                  {adminProfile.phone_number || 'Not provided'}
-                </p>
-              </div>
-            </div>
-
+          <div className="flex items-center gap-2 mt-2 text-xs text-white/60">
+            <Shield size={14} />
+            Administrator
           </div>
+
         </div>
 
-      </div>
+        {/* Navigation */}
+        <nav className="flex flex-col p-4 gap-2">
+
+          <button
+            onClick={() => setCurrentTab('profile')}
+            className={`flex items-center gap-3 p-3 rounded-lg transition ${
+              currentTab === 'profile'
+                ? 'bg-white text-[#003366]'
+                : 'hover:bg-white/10'
+            }`}
+          >
+            <User size={18} />
+            Profile
+          </button>
+
+          <button
+            onClick={() => setCurrentTab('events')}
+            className={`flex items-center gap-3 p-3 rounded-lg transition ${
+              currentTab === 'events'
+                ? 'bg-white text-[#003366]'
+                : 'hover:bg-white/10'
+            }`}
+          >
+            <Calendar size={18} />
+            Manage Events
+          </button>
+
+          <button
+            onClick={() => setCurrentTab('organizers')}
+            className={`flex items-center gap-3 p-3 rounded-lg transition ${
+              currentTab === 'organizers'
+                ? 'bg-white text-[#003366]'
+                : 'hover:bg-white/10'
+            }`}
+          >
+            <Users size={18} />
+            Organizers
+          </button>
+
+          <button
+            onClick={() => setCurrentTab('students')}
+            className={`flex items-center gap-3 p-3 rounded-lg transition ${
+              currentTab === 'students'
+                ? 'bg-white text-[#003366]'
+                : 'hover:bg-white/10'
+            }`}
+          >
+            <Users size={18} />
+            Students
+          </button>
+
+        </nav>
+
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col p-10 min-w-0 overflow-y-auto">
+
+        {renderContent()}
+
+      </main>
+
     </div>
   );
 };
