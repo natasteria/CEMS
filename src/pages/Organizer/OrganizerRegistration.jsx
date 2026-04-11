@@ -42,7 +42,7 @@ const OrganizerRegistration = () => {
 
       // Navigate to pending review page
       if (data.session) {
-        navigate('/organizer/pending');
+        navigate('/organizer-pending');
       }
     } catch (error) {
       alert(error.message);

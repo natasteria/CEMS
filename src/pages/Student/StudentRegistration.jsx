@@ -86,7 +86,7 @@ const StudentRegistration = () => {
 
       // If session exists, user is automatically logged in
       if (data.session) {
-        navigate('/eventDiscovery'); // redirect to home page
+        navigate('/event-discovery'); // redirect to home page
       } else {
         alert('Registration successful! Please check your email if a confirmation is required.');
       }

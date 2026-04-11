@@ -40,7 +40,7 @@ const AdminRegistrationForm = () => {
 
       if (data.session) {
         // auto-login if session exists
-        navigate('/admin/dashboard'); 
+        navigate('/admin-dashboard'); 
       } else {
         alert('Admin registered successfully! Check email for confirmation if required.');
       }

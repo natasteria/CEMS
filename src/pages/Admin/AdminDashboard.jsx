@@ -5,7 +5,7 @@ import { Loader2, User, Calendar, Users, Shield } from 'lucide-react';
 // Pages that render inside main area
 import AdminProfile from './DashBoardComponents/AdminProfile';
 // import ManageEvents from './components/ManageEvents';
-// import ManageOrganizers from './components/ManageOrganizers';
+import PendingOrganizers from './DashBoardComponents/PendingOrganizers';
 // import ManageStudents from './components/ManageStudents';
 
 const AdminDashboard = () => {
@@ -83,7 +83,7 @@ const AdminDashboard = () => {
         return <ManageEvents />;
 
       case 'organizers':
-        return <ManageOrganizers />;
+        return <PendingOrganizers />;
 
       case 'students':
         return <ManageStudents />;
@@ -170,7 +170,7 @@ const AdminDashboard = () => {
             }`}
           >
             <Users size={18} />
-            Organizers
+            Pending Organizers
           </button>
 
           <button
