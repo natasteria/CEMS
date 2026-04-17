@@ -44,9 +44,9 @@ const PendingReview = () => {
 
         // 4. Handle Redirection
         if (data.registration_status === 'approved') {
-          navigate('/organizer/dashboard');
+          navigate('/organizer-dashboard');
         } else if (data.registration_status === 'rejected') {
-          navigate('/organizer/rejected');
+          navigate('/organizer-rejected');
         }
       }
     };
