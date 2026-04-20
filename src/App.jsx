@@ -8,6 +8,7 @@ import AdminRegistration from './pages/Admin/AdminRegistration';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import Login from './pages/Login';
 import OrganizerDashboard from './pages/Organizer/OrganizerDashboard';
+import StudentDashboard from './pages/Student/PersonalDashboard'
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
 
         {/* Login Routes */}
+        <Route path="/dashboard" element={<StudentDashboard />} />
         <Route path="/" element={<Login />} />
 
         {/* Optional: redirect unknown routes */}

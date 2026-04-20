@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, LogOut, MapPin, Calendar, Loader2, ArrowUpRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Search, X, LogOut, MapPin, Calendar, Loader2, ArrowUpRight,User } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 
 const EventDiscovery = () => {
   const navigate = useNavigate();
+  // Add these two lines at the top of your component function
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [myRegs, setMyRegs] = useState([]); // This tracks which events YOU have joined
 
   // ---------------- STUDENT STATE ----------------
   const [student, setStudent] = useState(null);
@@ -83,7 +87,49 @@ const EventDiscovery = () => {
       }
 
       const formattedEvents = data.map((event) => {
-        const dateObj = new Date(event.start_datetime);
+      const dateObj = new Date(event.start_datetime);
+
+      const handleRegister = async (event) => {
+        setIsRegistering(true);
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return alert("Please login to register.");
+      
+          // 1. Check Deadline
+          if (event.registration_deadline && new Date() > new Date(event.registration_deadline)) {
+            return alert("Registration closed: The deadline has passed.");
+          }
+      
+          // 2. Check Capacity
+          if (event.capacity !== null) {
+            const { count } = await supabase
+              .from('registrations')
+              .select('*', { count: 'exact', head: true })
+              .eq('event_id', event.id);
+      
+            if (count >= event.capacity) {
+              return alert("Event Full: No more seats available.");
+            }
+          }
+      
+          // 3. Insert Registration
+          const { error } = await supabase
+            .from('registrations')
+            .insert([{ 
+              event_id: event.id, 
+              student_id: user.id, 
+              registration_status: 'registered' 
+            }]);
+      
+          if (error) throw error;
+          alert("Successfully registered!");
+          setSelectedEvent(null);
+        } catch (err) {
+          alert(err.message.includes('unique') ? "You are already registered!" : "Registration failed.");
+        } finally {
+          setIsRegistering(false);
+        }
+      };
         
         return {
           id: event.id,
@@ -111,6 +157,50 @@ const EventDiscovery = () => {
     };
     fetchEvents();
   }, []);
+
+  const handleRegister = async (event) => {
+    setIsRegistering(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return alert("Please login to register.");
+  
+      // 1. Check Deadline
+      if (event.registration_deadline && new Date() > new Date(event.registration_deadline)) {
+        return alert("Registration closed: The deadline has passed.");
+      }
+  
+      // 2. Check Capacity
+      if (event.capacity !== null) {
+        const { count } = await supabase
+          .from('registrations')
+          .select('*', { count: 'exact', head: true })
+          .eq('event_id', event.id);
+  
+        if (count >= event.capacity) {
+          return alert("Event Full: No more seats available.");
+        }
+      }
+  
+      // 3. Insert Registration
+      const { error } = await supabase
+        .from('registrations')
+        .insert([{ 
+          event_id: event.id, 
+          student_id: user.id, 
+          registration_status: 'registered' 
+        }]);
+  
+      if (error) throw error;
+      
+      // Update the local state so the button changes to "Registered" immediately
+      setMyRegs(prev => [...prev, event.id]);
+      alert("Successfully registered!");
+    } catch (err) {
+      alert(err.message.includes('unique') ? "You are already registered!" : "Registration failed.");
+    } finally {
+      setIsRegistering(false);
+    }
+  };
 
   // ---------------- HANDLERS ----------------
   const handleSignOut = async () => {
@@ -196,6 +286,14 @@ const EventDiscovery = () => {
                   <p className="text-[10px] text-slate-400">Student</p>
                 </div>
               </div>
+              <Link
+                to="/Dashboard"
+                className="h-9 w-9 rounded-full border border-slate-200 text-slate-500 grid place-items-center hover:text-unity-blue hover:border-unity-yellow transition-colors"
+                title="View Profile"
+              >
+                <User size={16} />
+              </Link>             
+
               <button
                 onClick={handleSignOut}
                 className="h-9 w-9 rounded-full border border-slate-200 text-slate-500 grid place-items-center hover:text-unity-blue hover:border-unity-yellow transition-colors"
@@ -272,7 +370,7 @@ const EventDiscovery = () => {
         ) : filteredEvents.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
+              <EventCard key={event.id} event={event} onViewDetails={() => setSelectedEvent(event)}/>
             ))}
           </div>
         ) : (
@@ -286,6 +384,115 @@ const EventDiscovery = () => {
             </button>
           </div>
         )}
+{selectedEvent && (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100">
+      <div className="p-8">
+        {/* Header & Categories */}
+        <div className="flex justify-between items-start mb-6">
+          <div className="flex flex-wrap gap-2">
+            {selectedEvent.categories?.length > 0 ? (
+              selectedEvent.categories.map((cat, i) => (
+                <span key={i} className="bg-blue-50 text-[#1d3a8a] text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest">{cat}</span>
+              ))
+            ) : (
+              <span className="bg-slate-50 text-slate-400 text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest">General</span>
+            )}
+          </div>
+          <button onClick={() => setSelectedEvent(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+        </div>
+
+        {/* Title & Organizer */}
+        <div className="mb-6">
+          <h2 className="text-2xl font-black text-slate-900 leading-tight mb-1">{selectedEvent.title || "Untitled Event"}</h2>
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">
+            Organized by: <span className="text-slate-600">{selectedEvent.organizer || "Campus Core Admin"}</span>
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-8 border-y border-slate-50 py-6 text-[12px]">
+  <div className="space-y-4">
+    {/* Schedule Section */}
+    <div>
+      <p className="font-black text-slate-400 uppercase text-[9px] mb-1 tracking-widest">Schedule</p>
+      <p className="font-bold text-slate-700">
+        {(() => {
+          // Grabs the raw date string from the database
+          const raw = selectedEvent.date || selectedEvent.start_datetime;
+          if (!raw) return "Date TBD";
+          
+          // Takes the first 10 characters to ensure the year (2026) is included
+          // Example: "2026-04-20"
+          return raw.includes('T') ? raw.split('T')[0] : raw.slice(0, 10);
+        })()}
+      </p>
+      <p className="text-slate-500 text-[10px]">
+        {(() => {
+          const start = selectedEvent.time || selectedEvent.start_datetime;
+          const end = selectedEvent.end_datetime;
+          if (!start) return "Time TBD";
+
+          // Manual string slice for HH:MM format
+          const startTime = start.includes('T') ? start.split('T')[1].slice(0, 5) : start.slice(0, 5);
+          const endTime = end && end.includes('T') ? ` - ${end.split('T')[1].slice(0, 5)}` : "";
+          
+          return `${startTime}${endTime}`;
+        })()}
+      </p>
+    </div>
+
+    {/* Location Section */}
+    <div>
+      <p className="font-black text-slate-400 uppercase text-[9px] mb-1 tracking-widest">Location</p>
+      <p className="font-bold text-slate-700 flex items-center gap-1">
+        <MapPin size={12} className="text-[#facc15]" /> 
+        {selectedEvent.venue || selectedEvent.location || "Venue TBD"}
+      </p>
+    </div>
+  </div>
+
+  {/* Right Column: Capacity & Deadline */}
+  <div className="space-y-4 border-l border-slate-50 pl-4">
+    <div>
+      <p className="font-black text-slate-400 uppercase text-[9px] mb-1 tracking-widest">Capacity</p>
+      <p className="font-bold text-slate-700">{selectedEvent.capacity || "Unlimited"}</p>
+    </div>
+    <div>
+      <p className="font-black text-slate-400 uppercase text-[9px] mb-1 tracking-widest">Reg. Deadline</p>
+      <p className="font-bold text-red-500">
+        {selectedEvent.registration_deadline 
+          ? selectedEvent.registration_deadline.split('T')[0] 
+          : "No Deadline"}
+      </p>
+    </div>
+  </div>
+</div>
+        {/* Description */}
+        <div className="mb-10">
+          <p className="text-[9px] font-black text-slate-400 uppercase mb-2 tracking-widest">About the Event</p>
+          <p className="text-slate-500 text-sm leading-relaxed max-h-32 overflow-y-auto scrollbar-hide">
+            {selectedEvent.description || "No description provided for this event."}
+          </p>
+        </div>
+
+        {/* Registration Button Logic */}
+        {myRegs.includes(selectedEvent.id) ? (
+          <div className="w-full py-4 bg-emerald-50 text-emerald-600 font-black uppercase tracking-[0.2em] rounded-xl flex items-center justify-center gap-2 border border-emerald-100">
+             Registered
+          </div>
+        ) : (
+          <button
+            disabled={isRegistering}
+            onClick={() => handleRegister(selectedEvent)}
+            className="w-full py-4 bg-[#1d3a8a] text-[#facc15] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-blue-900 transition-all disabled:opacity-50"
+          >
+            {isRegistering ? "Verifying..." : "Confirm Registration"}
+          </button>
+        )}
+      </div>
+    </div>
+  </div>
+)}
       </main>
     </div>
   );
@@ -307,7 +514,7 @@ const FilterSelect = ({ label, options, value, onChange }) => (
   </div>
 );
 
-const EventCard = ({ event }) => (
+const EventCard = ({ event, onViewDetails }) => (
   <article className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-unity-blue/10">
     <div className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-unity-yellow/20 blur-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
     <div className="relative h-48 overflow-hidden bg-slate-100">
@@ -342,10 +549,14 @@ const EventCard = ({ event }) => (
         <p className="text-sm leading-relaxed text-slate-500 line-clamp-2">{event.description}</p>
       </div>
 
-      <button className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-xl bg-unity-yellow py-2.5 text-sm font-bold text-unity-navy transition-all hover:brightness-95">
+      <button onClick={onViewDetails}
+      className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-xl bg-unity-yellow py-2.5 text-sm font-bold text-unity-navy transition-all hover:brightness-95">
         View Details
         <ArrowUpRight size={14} />
       </button>
+
+
+
     </div>
   </article>
 );
