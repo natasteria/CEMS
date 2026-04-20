@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, User, LogOut, MapPin, Filter, Calendar, Loader2 } from 'lucide-react';
+import { Search, X, LogOut, MapPin, Calendar, Loader2, ArrowUpRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 
 const EventDiscovery = () => {
+  const navigate = useNavigate();
 
   // ---------------- STUDENT STATE ----------------
   const [student, setStudent] = useState(null);
@@ -19,18 +21,14 @@ const EventDiscovery = () => {
 
   // ---------------- FETCH STUDENT ----------------
   useEffect(() => {
-
     const fetchStudentData = async () => {
-
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-
       if (userError) {
         console.error(userError);
         return;
       }
-
       if (!user) {
-        console.error("No authenticated user");
+        navigate('/');
         return;
       }
 
@@ -54,312 +52,302 @@ const EventDiscovery = () => {
       } else {
         setStudent(data);
       }
-
       setLoadingStudent(false);
     };
-
     fetchStudentData();
+  }, [navigate]);
 
-  }, []);
-
-  // ---------------- MOCK EVENTS ----------------
+  // ---------------- FETCH EVENTS ----------------
   useEffect(() => {
+    const fetchEvents = async () => {
+      setLoadingEvents(true);
+      const { data, error } = await supabase
+        .from('events')
+        .select(`
+          id,
+          title,
+          description,
+          start_datetime,
+          venue,
+          categories,
+          image_url
+        `)
+        .eq('status', 'approved')
+        .is('deleted_at', null)
+        .order('start_datetime', { ascending: true });
 
-    const mockEvents = [
-      {
-        id: 1,
-        title: "Unity Innovation & Tech Expo",
-        date: "Mar 12",
-        time: "09:00 AM",
-        location: "Gerji Campus Main Hall",
-        description: "Showcasing student-led engineering projects.",
-        category: "Academic",
-        image: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800",
-      },
-      {
-        id: 2,
-        title: "Great Unity Run: 5K Walk",
-        date: "Apr 05",
-        time: "07:00 AM",
-        location: "Gerji Campus Main Hall",
-        description: "Community health event with students and alumni.",
-        category: "Sports & Wellness",
-        image: "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=800",
-      },
-      {
-        id: 3,
-        title: "Ethiopian Heritage Day",
-        date: "May 20",
-        time: "02:00 PM",
-        location: "Unity University Football Field",
-        description: "Celebrating Ethiopia's cultures and traditions.",
-        category: "Arts & Culture",
-        image: "https://images.unsplash.com/photo-1523438097201-512ae7d59c44?w=800",
+      if (error) {
+        console.error(error.message);
+        setLoadingEvents(false);
+        return;
       }
-    ];
 
-    setEvents(mockEvents);
-    setLoadingEvents(false);
+      const formattedEvents = data.map((event) => {
+        const dateObj = new Date(event.start_datetime);
+        
+        return {
+          id: event.id,
+          title: event.title,
+          rawDate: dateObj, 
+          date: dateObj.toLocaleDateString('en-US', {
+            month: 'short',
+            day: '2-digit'
+          }),
+          time: dateObj.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          location: event.venue,
+          description: event.description || '',
+          categories: event.categories && event.categories.length > 0 
+            ? event.categories 
+            : ['General'],
+          image: event.image_url || 'https://via.placeholder.com/800'
+        };
+      });
 
+      setEvents(formattedEvents);
+      setLoadingEvents(false);
+    };
+    fetchEvents();
   }, []);
 
-  // ---------------- FILTER EVENTS ----------------
+  // ---------------- HANDLERS ----------------
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (!error) {
+      navigate('/'); 
+    } else {
+      console.error("Error signing out:", error.message);
+    }
+  };
+
+  // ---------------- FILTER LOGIC ----------------
+  // This derived state updates automatically whenever events, searchQuery, 
+  // categoryFilter, or dateFilter changes.
   const filteredEvents = events.filter((event) => {
+    // Feature 1 & 2: Search by Title/Description + .trim() for robustness
+    const normalizedQuery = searchQuery.toLowerCase().trim();
+    const matchesSearch = 
+      event.title.toLowerCase().includes(normalizedQuery) || 
+      event.description.toLowerCase().includes(normalizedQuery);
 
-    const matchesSearch =
-      event.title.toLowerCase().includes(searchQuery.toLowerCase());
+    // Feature 3: Category Filter
+    const matchesCategory = categoryFilter === 'all' || event.categories.includes(categoryFilter);
 
-    const matchesCategory =
-      categoryFilter === 'all' || event.category === categoryFilter;
+    // Feature 3: Date Timeline Logic
+    let matchesDate = true;
+    if (dateFilter !== 'all') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const eventDate = new Date(event.rawDate);
+      eventDate.setHours(0, 0, 0, 0);
 
-    const matchesDate =
-      dateFilter === 'all' || event.date === dateFilter;
+      if (dateFilter === 'Today') {
+        matchesDate = eventDate.getTime() === today.getTime();
+      } else if (dateFilter === 'This Week') {
+        const nextWeek = new Date(today);
+        nextWeek.setDate(today.getDate() + 7);
+        matchesDate = eventDate >= today && eventDate <= nextWeek;
+      } else if (dateFilter === 'This Month') {
+        matchesDate = eventDate.getMonth() === today.getMonth() && 
+                      eventDate.getFullYear() === today.getFullYear();
+      }
+    }
 
     return matchesSearch && matchesCategory && matchesDate;
-
   });
 
-  // ---------------- STUDENT NAME + INITIALS ----------------
-  const fullName = student
-    ? `${student.profiles.first_name} ${student.profiles.last_name}`
-    : '';
-
-  const initials = student
-    ? `${student.profiles.first_name[0]}${student.profiles.last_name[0]}`.toUpperCase()
-    : '';
-
-  // ---------------- LOADING SCREEN ----------------
+  const fullName = student ? `${student.profiles.first_name} ${student.profiles.last_name}` : '';
+  const initials = student ? `${student.profiles.first_name[0]}${student.profiles.last_name[0]}`.toUpperCase() : '';
   if (loadingStudent) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="flex flex-col items-center">
-          <Loader2 className="w-12 h-12 text-[#003366] animate-spin mb-4" />
-          <p className="text-slate-500 font-medium animate-pulse">
-            Loading student dashboard...
-          </p>
+          <Loader2 className="w-12 h-12 text-unity-blue animate-spin mb-4" />
+          <p className="text-slate-500 font-medium animate-pulse">Loading student dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-900">
-
-      {/* HERO */}
-      <section className="relative bg-unity-blue py-12 px-6 md:px-12 lg:px-24 text-center overflow-hidden">
-
-        <div className="absolute top-[-50%] right-[-10%] w-[600px] h-[600px] bg-unity-yellow/5 rounded-full blur-[100px]" />
-
-        {/* NAV OVERLAY */}
-        <div className="absolute top-6 right-6 flex gap-3 items-center z-10">
-
-          <div className="flex items-center gap-2 px-3 h-10 rounded-full bg-white/10 border border-white/20 text-white">
-
-            <User size={18} />
-
-            <span className="font-bold text-sm tracking-wide">
-              {initials}
-            </span>
-
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      <header className="bg-white border-b border-slate-200">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-unity-blue text-white grid place-items-center shadow-sm">
+                <Calendar size={18} />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Unity University</p>
+                <p className="text-sm font-semibold text-unity-navy">Event Discovery</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-slate-100 border border-slate-200">
+                <div className="w-7 h-7 rounded-full bg-unity-blue text-white grid place-items-center text-[11px] font-bold">
+                  {initials}
+                </div>
+                <div className="leading-tight pr-1">
+                  <p className="text-xs font-semibold text-slate-700 max-w-36 truncate">{fullName || 'Student'}</p>
+                  <p className="text-[10px] text-slate-400">Student</p>
+                </div>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="h-9 w-9 rounded-full border border-slate-200 text-slate-500 grid place-items-center hover:text-unity-blue hover:border-unity-yellow transition-colors"
+                title="Sign out"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
           </div>
 
-          <button
-            onClick={() => supabase.auth.signOut()}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 border border-white/20 text-white hover:text-unity-yellow hover:border-unity-yellow transition-all"
-          >
-            <LogOut size={18} />
-          </button>
-
-        </div>
-
-        <div className="max-w-4xl mx-auto relative z-10">
-
-          <span className="inline-block px-4 py-1 mb-4 rounded-full bg-white/10 border border-white/20 text-unity-yellow text-[10px] font-bold tracking-widest uppercase">
-            Unity University Campus Core
-          </span>
-
-          <h1 className="text-3xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">
-            Discover Every Moment on Campus
-          </h1>
-
-          <p className="text-slate-300 text-base mb-10 max-w-2xl mx-auto leading-relaxed">
-            Welcome {fullName}. Explore events happening across campus.
-          </p>
-
-          {/* SEARCH BAR */}
-          <div className="relative max-w-2xl mx-auto group">
-
-            <div className="flex items-center bg-white rounded-2xl px-6 h-14 shadow-2xl border-2 border-transparent group-focus-within:border-unity-yellow">
-
-              <Search className="text-slate-400 mr-4" size={20} />
-
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-[1.6fr_0.8fr_0.8fr_auto] gap-3">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
                 type="text"
                 placeholder="Search events..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent outline-none text-base text-slate-900"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-10 text-sm text-slate-900 outline-none focus:border-unity-yellow focus:ring-2 focus:ring-unity-yellow/30"
               />
-
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="p-2 hover:bg-slate-100 rounded-full"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-slate-500 hover:bg-slate-100"
+                  aria-label="Clear search"
                 >
-                  <X size={16} />
+                  <X size={14} />
                 </button>
               )}
-
             </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
-      {/* EVENTS SECTION */}
-      <main className="max-w-8xl mx-auto px-6 md:px-12 lg:px-24 py-12">
-
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
-
-          <header>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-2 h-8 bg-unity-yellow rounded-full" />
-              <h2 className="text-2xl font-bold text-slate-900">Featured Events</h2>
-            </div>
-
-            <p className="text-slate-500 ml-5">
-              Browse the latest activities across all departments
-            </p>
-          </header>
-
-          <div className="flex gap-4 w-full md:w-auto">
 
             <FilterSelect
               label="Category"
-              options={['Academic','Arts & Culture','Career','Sports & Wellness']}
+              options={[
+                'Workshop', 'Seminar', 'Guest Lecture', 'Career Fair',
+                'Hackathon', 'Research Symposium', 'Club Meeting',
+                'Social Gathering', 'Movie Night', 'Sports & Fitness',
+                'Volunteer/Service', 'Competition', 'Networking'
+              ]}
               value={categoryFilter}
               onChange={setCategoryFilter}
             />
-
             <FilterSelect
-              label="Date"
-              options={['Mar 12','Apr 05','May 20']}
+              label="Timeline"
+              options={['Today', 'This Week', 'This Month']}
               value={dateFilter}
               onChange={setDateFilter}
             />
-
+            <button
+              type="button"
+              onClick={() => { setSearchQuery(''); setCategoryFilter('all'); setDateFilter('all'); }}
+              className="h-11 rounded-xl bg-unity-yellow px-4 text-sm font-semibold text-unity-navy hover:brightness-95 transition-colors"
+            >
+              Reset
+            </button>
           </div>
+        </div>
+      </header>
 
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <p className="text-[11px] uppercase tracking-widest font-bold text-unity-blue/70">Curated events</p>
+            <h2 className="text-2xl font-bold text-unity-navy">Featured picks for you</h2>
+          </div>
+          <p className="text-sm text-slate-500">{loadingEvents ? 'Loading events...' : `${filteredEvents.length} events found`}</p>
         </div>
 
         {loadingEvents ? (
           <div className="flex flex-col items-center py-20">
-            <Loader2 className="w-10 h-10 text-[#003366] animate-spin mb-4" />
+            <Loader2 className="w-10 h-10 text-unity-blue animate-spin mb-4" />
             <p className="text-slate-400 animate-pulse">Loading events...</p>
           </div>
         ) : filteredEvents.length > 0 ? (
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredEvents.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>
-
         ) : (
-          <div className="text-center py-20 text-slate-400">No matching events found.</div>
+          <div className="text-center py-20 rounded-2xl border border-dashed border-slate-300 bg-white">
+            <p className="text-slate-500 text-lg">No matching events found.</p>
+            <button
+              onClick={() => { setSearchQuery(''); setCategoryFilter('all'); setDateFilter('all'); }}
+              className="mt-4 text-unity-blue font-semibold hover:underline"
+            >
+              Clear all filters
+            </button>
+          </div>
         )}
-
       </main>
     </div>
   );
 };
 
-
-// FILTER COMPONENT
 const FilterSelect = ({ label, options, value, onChange }) => (
-
-  <div className="flex-1 md:w-48">
-
-    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">
-      {label}
-    </label>
-
+  <div>
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-xl px-4 py-2.5 outline-none focus:border-unity-blue cursor-pointer"
+      className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 outline-none focus:border-unity-yellow focus:ring-2 focus:ring-unity-yellow/30 cursor-pointer"
+      aria-label={label}
     >
       <option value="all">All {label}s</option>
-
       {options.map((opt) => (
-        <option key={opt} value={opt}>
-          {opt}
-        </option>
+        <option key={opt} value={opt}>{opt}</option>
       ))}
-
     </select>
-
   </div>
-
 );
 
-
-// EVENT CARD
 const EventCard = ({ event }) => (
-
-  <article className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col hover:shadow-lg">
-
+  <article className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-unity-blue/10">
+    <div className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-unity-yellow/20 blur-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
     <div className="relative h-48 overflow-hidden bg-slate-100">
-
       <img
         src={event.image}
         alt={event.title}
-        className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
       />
-
-      <div className="absolute top-4 right-4">
-
-        <span className="bg-white/95 px-3 py-1 rounded-lg text-[10px] font-bold text-unity-blue uppercase border border-slate-100">
-          {event.category}
-        </span>
-
+      <div className="absolute inset-0 bg-linear-to-t from-unity-navy/70 via-unity-navy/20 to-transparent" />
+      <div className="absolute left-3 top-3 flex flex-wrap gap-2 pr-3">
+        {event.categories.slice(0, 2).map((cat, index) => (
+          <span key={index} className="rounded-full border border-white/30 bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur">
+            {cat}
+          </span>
+        ))}
       </div>
-
+      <div className="absolute top-3 right-3 rounded-full border border-unity-yellow/30 bg-unity-yellow px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-unity-navy shadow-sm">
+        Featured
+      </div>
     </div>
 
-    <div className="p-6 flex flex-col flex-grow">
-
-      <h3 className="text-xl font-bold text-slate-900 mb-3">
-        {event.title}
-      </h3>
-
-      <div className="space-y-3 mb-6">
-
-        <p className="text-sm font-bold text-unity-blue flex items-center gap-2">
+    <div className="p-5 flex min-h-[210px] flex-col">
+      <h3 className="text-xl font-bold leading-tight text-unity-navy mb-3 line-clamp-2">{event.title}</h3>
+      <div className="space-y-3 mb-5">
+        <p className="inline-flex items-center gap-2 rounded-lg bg-unity-blue/5 px-2.5 py-1.5 text-xs font-semibold text-unity-blue">
           <Calendar size={14} /> {event.date} • {event.time}
         </p>
-
-        <div className="flex items-start gap-2 text-slate-400">
-          <MapPin size={16} className="text-unity-yellow" />
-          <span className="text-sm text-slate-600">{event.location}</span>
-        </div>
-
-        <p className="text-sm text-slate-500 line-clamp-2">
-          {event.description}
+        <p className="flex items-start gap-2 text-sm text-slate-600">
+          <MapPin size={15} className="mt-0.5 text-unity-yellow shrink-0" />
+          <span className="line-clamp-1">{event.location}</span>
         </p>
-
+        <p className="text-sm leading-relaxed text-slate-500 line-clamp-2">{event.description}</p>
       </div>
 
-      <button className="mt-auto w-full bg-unity-blue hover:bg-unity-navy text-white py-3 rounded-xl font-bold text-sm">
+      <button className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-xl bg-unity-yellow py-2.5 text-sm font-bold text-unity-navy transition-all hover:brightness-95">
         View Details
+        <ArrowUpRight size={14} />
       </button>
-
     </div>
-
   </article>
-
 );
 
 export default EventDiscovery;
