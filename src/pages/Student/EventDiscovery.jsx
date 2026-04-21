@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Search, X, LogOut, MapPin, Calendar, Loader2, ArrowUpRight,User } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, X, LogOut, MapPin, Calendar, Loader2, User, ChevronDown } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 
 const EventDiscovery = () => {
   const navigate = useNavigate();
+  const searchInputRef = useRef(null);
   // Add these two lines at the top of your component function
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isRegistering, setIsRegistering] = useState(false);
@@ -22,6 +23,54 @@ const EventDiscovery = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+
+  const [toast, setToast] = useState({
+    show: false,
+    type: 'info',
+    message: '',
+    mode: 'notice'
+  });
+
+  const showNotice = (message, type = 'info') => {
+    setToast({ show: true, type, message, mode: 'notice' });
+  };
+
+  const handleLogoutRequest = () => {
+    setToast({
+      show: true,
+      type: 'warning',
+      message: 'Are you sure you want to log out?',
+      mode: 'confirmLogout'
+    });
+  };
+
+  const handleConfirmLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      showNotice(error.message || 'Logout failed. Please try again.', 'error');
+      return;
+    }
+    navigate('/');
+  };
+
+  useEffect(() => {
+    if (!toast.show || toast.mode !== 'notice') return undefined;
+    const timer = setTimeout(() => {
+      setToast((prev) => ({ ...prev, show: false }));
+    }, 3200);
+    return () => clearTimeout(timer);
+  }, [toast.show, toast.mode]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // ---------------- FETCH STUDENT ----------------
   useEffect(() => {
@@ -72,9 +121,12 @@ const EventDiscovery = () => {
           title,
           description,
           start_datetime,
+          end_datetime,
           venue,
           categories,
-          image_url
+          image_url,
+          registration_deadline,
+          capacity
         `)
         .eq('status', 'approved')
         .is('deleted_at', null)
@@ -88,53 +140,14 @@ const EventDiscovery = () => {
 
       const formattedEvents = data.map((event) => {
       const dateObj = new Date(event.start_datetime);
+      const endDateObj = event.end_datetime ? new Date(event.end_datetime) : null;
 
-      const handleRegister = async (event) => {
-        setIsRegistering(true);
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) return alert("Please login to register.");
-      
-          // 1. Check Deadline
-          if (event.registration_deadline && new Date() > new Date(event.registration_deadline)) {
-            return alert("Registration closed: The deadline has passed.");
-          }
-      
-          // 2. Check Capacity
-          if (event.capacity !== null) {
-            const { count } = await supabase
-              .from('registrations')
-              .select('*', { count: 'exact', head: true })
-              .eq('event_id', event.id);
-      
-            if (count >= event.capacity) {
-              return alert("Event Full: No more seats available.");
-            }
-          }
-      
-          // 3. Insert Registration
-          const { error } = await supabase
-            .from('registrations')
-            .insert([{ 
-              event_id: event.id, 
-              student_id: user.id, 
-              registration_status: 'registered' 
-            }]);
-      
-          if (error) throw error;
-          alert("Successfully registered!");
-          setSelectedEvent(null);
-        } catch (err) {
-          alert(err.message.includes('unique') ? "You are already registered!" : "Registration failed.");
-        } finally {
-          setIsRegistering(false);
-        }
-      };
-        
         return {
           id: event.id,
           title: event.title,
           rawDate: dateObj, 
+          start_datetime: event.start_datetime,
+          end_datetime: event.end_datetime,
           date: dateObj.toLocaleDateString('en-US', {
             month: 'short',
             day: '2-digit'
@@ -143,12 +156,20 @@ const EventDiscovery = () => {
             hour: '2-digit',
             minute: '2-digit'
           }),
+          endDate: endDateObj
+            ? endDateObj.toLocaleDateString('en-US', { month: 'short', day: '2-digit' })
+            : null,
+          endTime: endDateObj
+            ? endDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : null,
           location: event.venue,
           description: event.description || '',
           categories: event.categories && event.categories.length > 0 
             ? event.categories 
             : ['General'],
-          image: event.image_url || 'https://via.placeholder.com/800'
+          image: event.image_url || 'https://via.placeholder.com/800',
+          registration_deadline: event.registration_deadline,
+          capacity: event.capacity
         };
       });
 
@@ -162,22 +183,27 @@ const EventDiscovery = () => {
     setIsRegistering(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return alert("Please login to register.");
+      if (!user) {
+        showNotice('Please log in to register.', 'error');
+        return;
+      }
   
       // 1. Check Deadline
       if (event.registration_deadline && new Date() > new Date(event.registration_deadline)) {
-        return alert("Registration closed: The deadline has passed.");
+        showNotice('Registration closed: The deadline has passed.', 'error');
+        return;
       }
   
       // 2. Check Capacity
-      if (event.capacity !== null) {
+      if (event.capacity !== null && event.capacity !== undefined) {
         const { count } = await supabase
           .from('registrations')
           .select('*', { count: 'exact', head: true })
           .eq('event_id', event.id);
   
         if (count >= event.capacity) {
-          return alert("Event Full: No more seats available.");
+          showNotice('Event full: No more seats available.', 'error');
+          return;
         }
       }
   
@@ -194,21 +220,15 @@ const EventDiscovery = () => {
       
       // Update the local state so the button changes to "Registered" immediately
       setMyRegs(prev => [...prev, event.id]);
-      alert("Successfully registered!");
+      setSelectedEvent(null);
+      showNotice('Successfully registered!', 'success');
     } catch (err) {
-      alert(err.message.includes('unique') ? "You are already registered!" : "Registration failed.");
+      showNotice(
+        err.message?.includes('unique') ? 'You are already registered!' : 'Registration failed.',
+        'error'
+      );
     } finally {
       setIsRegistering(false);
-    }
-  };
-
-  // ---------------- HANDLERS ----------------
-  const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
-      navigate('/'); 
-    } else {
-      console.error("Error signing out:", error.message);
     }
   };
 
@@ -251,314 +271,421 @@ const EventDiscovery = () => {
 
   const fullName = student ? `${student.profiles.first_name} ${student.profiles.last_name}` : '';
   const initials = student ? `${student.profiles.first_name[0]}${student.profiles.last_name[0]}`.toUpperCase() : '';
+  const getEventDuration = (event) => {
+    if (!event?.start_datetime || !event?.end_datetime) return 'Duration TBD';
+    const start = new Date(event.start_datetime);
+    const end = new Date(event.end_datetime);
+    const diffMs = end - start;
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || diffMs <= 0) {
+      return 'Duration TBD';
+    }
+
+    const totalMinutes = Math.floor(diffMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours && minutes) return `${hours}h ${minutes}m`;
+    if (hours) return `${hours}h`;
+    return `${minutes}m`;
+  };
+
   if (loadingStudent) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-        <div className="flex flex-col items-center">
-          <Loader2 className="w-12 h-12 text-unity-blue animate-spin mb-4" />
-          <p className="text-slate-500 font-medium animate-pulse">Loading student dashboard...</p>
+      <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-white p-4 font-sans text-slate-900">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.35]"
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, rgba(148, 163, 184, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(148, 163, 184, 0.1) 1px, transparent 1px)',
+            backgroundSize: '32px 32px'
+          }}
+        />
+        <div className="relative flex flex-col items-center">
+          <Loader2 className="mb-4 h-12 w-12 animate-spin text-unity-yellow" />
+          <p className="font-medium text-slate-300 animate-pulse">Loading Event Discovery...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      <header className="bg-white border-b border-slate-200">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-unity-blue text-white grid place-items-center shadow-sm">
-                <Calendar size={18} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Unity University</p>
-                <p className="text-sm font-semibold text-unity-navy">Event Discovery</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-slate-100 border border-slate-200">
-                <div className="w-7 h-7 rounded-full bg-unity-blue text-white grid place-items-center text-[11px] font-bold">
-                  {initials}
-                </div>
-                <div className="leading-tight pr-1">
-                  <p className="text-xs font-semibold text-slate-700 max-w-36 truncate">{fullName || 'Student'}</p>
-                  <p className="text-[10px] text-slate-400">Student</p>
-                </div>
-              </div>
-              <Link
-                to="/Dashboard"
-                className="h-9 w-9 rounded-full border border-slate-200 text-slate-500 grid place-items-center hover:text-unity-blue hover:border-unity-yellow transition-colors"
-                title="View Profile"
-              >
-                <User size={16} />
-              </Link>             
+  <div className="relative min-h-screen overflow-hidden bg-white font-sans text-slate-900">
+    
+    {/* FULL PAGE GRID */}
+    <div
+      className="pointer-events-none absolute inset-0"
+      style={{
+        backgroundImage:
+          'linear-gradient(to right, rgba(19, 42, 92, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(19, 42, 92, 0.05) 1px, transparent 1px)',
+        backgroundSize: '40px 40px'
+      }}
+    />
 
-              <button
-                onClick={handleSignOut}
-                className="h-9 w-9 rounded-full border border-slate-200 text-slate-500 grid place-items-center hover:text-unity-blue hover:border-unity-yellow transition-colors"
-                title="Sign out"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
-          </div>
+    <div className="relative z-10">
+      <header className="bg-[#233f9c] border-b border-white/10 px-4 pb-8 pt-6 sm:px-8 lg:px-12">
+      <div
+    className="pointer-events-none absolute inset-0 opacity-[0.15]"
+    style={{
+      backgroundImage:
+        'linear-gradient(to right, rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.15) 1px, transparent 1px)',
+      backgroundSize: '36px 36px'
+    }}
+  />
+          <div className="mx-auto max-w-7xl">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="relative shrink-0">
+                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-unity-yellow text-unity-navy shadow-lg sm:h-12 sm:w-12">
+                    <Calendar className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.25} />
+                  </div>
+                  <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#0f1f52]" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-200/90">Unity University</p>
+                  <h1 className="mt-0.5 text-2xl font-black tracking-tight text-white sm:text-3xl">Event Discovery</h1>
+                </div>
+              </div>
 
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-[1.6fr_0.8fr_0.8fr_auto] gap-3">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input
-                type="text"
-                placeholder="Search events..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-10 text-sm text-slate-900 outline-none focus:border-unity-yellow focus:ring-2 focus:ring-unity-yellow/30"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-slate-500 hover:bg-slate-100"
-                  aria-label="Clear search"
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 py-1.5 pl-1.5 pr-2.5 backdrop-blur-md sm:flex">
+                  <div className="relative">
+                    <div className="grid h-8 w-8 place-items-center rounded-full bg-unity-yellow text-[11px] font-black text-unity-navy">
+                      {initials}
+                    </div>
+                    <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-[#0f1f52]" />
+                  </div>
+                  <div className="leading-tight">
+                    <p className="flex max-w-40 items-center gap-1 text-xs font-semibold text-white">
+                      <span className="truncate">{fullName || 'Student'}</span>
+                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    </p>
+                    <p className="text-[10px] text-slate-400">Student</p>
+                  </div>
+                </div>
+                <Link
+                  to="/Dashboard"
+                  className="grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-white/5 text-slate-300 backdrop-blur-md transition hover:border-unity-yellow/50 hover:text-white"
+                  title="View profile"
                 >
-                  <X size={14} />
+                  <User size={17} />
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogoutRequest}
+                  className="grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-white/5 text-slate-300 backdrop-blur-md transition hover:border-red-400/40 hover:text-red-300"
+                  title="Sign out"
+                >
+                  <LogOut size={17} />
                 </button>
-              )}
+              </div>
             </div>
 
-            <FilterSelect
-              label="Category"
-              options={[
-                'Workshop', 'Seminar', 'Guest Lecture', 'Career Fair',
-                'Hackathon', 'Research Symposium', 'Club Meeting',
-                'Social Gathering', 'Movie Night', 'Sports & Fitness',
-                'Volunteer/Service', 'Competition', 'Networking'
-              ]}
-              value={categoryFilter}
-              onChange={setCategoryFilter}
-            />
-            <FilterSelect
-              label="Timeline"
-              options={['Today', 'This Week', 'This Month']}
-              value={dateFilter}
-              onChange={setDateFilter}
-            />
-            <button
-              type="button"
-              onClick={() => { setSearchQuery(''); setCategoryFilter('all'); setDateFilter('all'); }}
-              className="h-11 rounded-xl bg-unity-yellow px-4 text-sm font-semibold text-unity-navy hover:brightness-95 transition-colors"
-            >
-              Reset
-            </button>
-          </div>
-        </div>
-      </header>
+            <div className="mt-8 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search events, speakers, venues..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-12 w-full rounded-full border border-white/10 bg-[#0f2550]/80 py-2 pl-11 pr-12 text-sm text-white placeholder:text-slate-400 outline-none backdrop-blur-md transition focus:border-unity-yellow/60 focus:ring-2 focus:ring-unity-yellow/25 sm:pr-20"
+                />
+                {!searchQuery && (
+                  <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:inline">
+                    ⌘K
+                  </kbd>
+                )}
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-white/10 hover:text-white"
+                    aria-label="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
 
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+              <FilterSelect
+                allLabel="All Categories"
+                options={[
+                  'Workshop', 'Seminar', 'Guest Lecture', 'Career Fair',
+                  'Hackathon', 'Research Symposium', 'Club Meeting',
+                  'Social Gathering', 'Movie Night', 'Sports & Fitness',
+                  'Volunteer/Service', 'Competition', 'Networking'
+                ]}
+                value={categoryFilter}
+                onChange={setCategoryFilter}
+              />
+              <FilterSelect
+                allLabel="All Timelines"
+                options={['Today', 'This Week', 'This Month']}
+                value={dateFilter}
+                onChange={setDateFilter}
+              />
+            </div>
+          </div>
+        </header>
+
+        <main className="relative mx-auto max-w-7xl px-4 pb-12 pt-6 sm:px-8 lg:px-12">
+        
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <p className="text-[11px] uppercase tracking-widest font-bold text-unity-blue/70">Curated events</p>
-            <h2 className="text-2xl font-bold text-unity-navy">Featured picks for you</h2>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-600">
+              Curated events
+            </p>
+            <h2 className="text-2xl font-bold text-slate-900">
+              Featured picks for you
+            </h2>
           </div>
-          <p className="text-sm text-slate-500">{loadingEvents ? 'Loading events...' : `${filteredEvents.length} events found`}</p>
+          <p className="text-sm text-slate-500">
+            {loadingEvents ? 'Loading events...' : `${filteredEvents.length} events found`}
+          </p>
         </div>
 
         {loadingEvents ? (
           <div className="flex flex-col items-center py-20">
-            <Loader2 className="w-10 h-10 text-unity-blue animate-spin mb-4" />
-            <p className="text-slate-400 animate-pulse">Loading events...</p>
+            <Loader2 className="mb-4 h-10 w-10 animate-spin text-unity-yellow" />
+            <p className="animate-pulse text-slate-500">Loading events...</p>
           </div>
         ) : filteredEvents.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
             {filteredEvents.map((event) => (
-              <EventCard key={event.id} event={event} onViewDetails={() => setSelectedEvent(event)}/>
+              <EventCard key={event.id} event={event} onViewDetails={() => setSelectedEvent(event)} />
             ))}
           </div>
         ) : (
-          <div className="text-center py-20 rounded-2xl border border-dashed border-slate-300 bg-white">
-            <p className="text-slate-500 text-lg">No matching events found.</p>
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-20 text-center">
+            <p className="text-lg text-slate-600">No matching events found.</p>
             <button
+              type="button"
               onClick={() => { setSearchQuery(''); setCategoryFilter('all'); setDateFilter('all'); }}
-              className="mt-4 text-unity-blue font-semibold hover:underline"
+              className="mt-4 text-sm font-semibold text-unity-yellow hover:underline"
             >
               Clear all filters
             </button>
           </div>
         )}
-{selectedEvent && (
-  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-    <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100">
-      <div className="p-8">
-        {/* Header & Categories */}
-        <div className="flex justify-between items-start mb-6">
-          <div className="flex flex-wrap gap-2">
-            {selectedEvent.categories?.length > 0 ? (
-              selectedEvent.categories.map((cat, i) => (
-                <span key={i} className="bg-blue-50 text-[#1d3a8a] text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest">{cat}</span>
-              ))
-            ) : (
-              <span className="bg-slate-50 text-slate-400 text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest">General</span>
-            )}
+
+      </main>
+
+      {selectedEvent && (
+  <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
+    <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-slate-950 shadow-2xl">
+      <div className="relative h-[280px] sm:h-[340px]">
+        <img
+          src={selectedEvent.image}
+          alt={selectedEvent.title}
+          className="h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-linear-to-t from-slate-950 via-slate-950/40 to-slate-900/20" />
+        <div className="absolute inset-0 flex flex-col justify-between p-5 sm:p-8">
+          <div className="flex items-start justify-between">
+            <button
+              onClick={() => setSelectedEvent(null)}
+              className="rounded-full bg-black/35 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-black/55"
+            >
+              Back to events
+            </button>
+            <button
+              onClick={() => setSelectedEvent(null)}
+              className="rounded-full bg-black/35 p-2 text-white transition hover:bg-black/55"
+              aria-label="Close modal"
+            >
+              <X size={18} />
+            </button>
           </div>
-          <button onClick={() => setSelectedEvent(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
-        </div>
 
-        {/* Title & Organizer */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-black text-slate-900 leading-tight mb-1">{selectedEvent.title || "Untitled Event"}</h2>
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">
-            Organized by: <span className="text-slate-600">{selectedEvent.organizer || "Campus Core Admin"}</span>
-          </p>
-        </div>
+          <div className="grid gap-4 lg:grid-cols-[1fr_360px] lg:items-end">
+            <div className="text-white">
+              <div className="mb-3 flex flex-wrap gap-2">
+                {(selectedEvent.categories?.length ? selectedEvent.categories : ['General']).slice(0, 3).map((cat, i) => (
+                  <span
+                    key={i}
+                    className="rounded-full border border-white/20 bg-black/35 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide backdrop-blur"
+                  >
+                    {cat}
+                  </span>
+                ))}
+                <span className="rounded-full bg-unity-yellow px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-unity-navy">
+                  Featured
+                </span>
+              </div>
+              <h2 className="text-3xl font-black leading-tight sm:text-5xl">{selectedEvent.title || 'Untitled Event'}</h2>
+              <p className="mt-2 text-sm text-white/80">
+                <MapPin size={14} className="mr-1 inline text-unity-yellow" />
+                Organized by {selectedEvent.organizer || 'Unity Research Council'}
+              </p>
+            </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-8 border-y border-slate-50 py-6 text-[12px]">
-  <div className="space-y-4">
-    {/* Schedule Section */}
-    <div>
-      <p className="font-black text-slate-400 uppercase text-[9px] mb-1 tracking-widest">Schedule</p>
-      <p className="font-bold text-slate-700">
-        {(() => {
-          // Grabs the raw date string from the database
-          const raw = selectedEvent.date || selectedEvent.start_datetime;
-          if (!raw) return "Date TBD";
-          
-          // Takes the first 10 characters to ensure the year (2026) is included
-          // Example: "2026-04-20"
-          return raw.includes('T') ? raw.split('T')[0] : raw.slice(0, 10);
-        })()}
-      </p>
-      <p className="text-slate-500 text-[10px]">
-        {(() => {
-          const start = selectedEvent.time || selectedEvent.start_datetime;
-          const end = selectedEvent.end_datetime;
-          if (!start) return "Time TBD";
-
-          // Manual string slice for HH:MM format
-          const startTime = start.includes('T') ? start.split('T')[1].slice(0, 5) : start.slice(0, 5);
-          const endTime = end && end.includes('T') ? ` - ${end.split('T')[1].slice(0, 5)}` : "";
-          
-          return `${startTime}${endTime}`;
-        })()}
-      </p>
-    </div>
-
-    {/* Location Section */}
-    <div>
-      <p className="font-black text-slate-400 uppercase text-[9px] mb-1 tracking-widest">Location</p>
-      <p className="font-bold text-slate-700 flex items-center gap-1">
-        <MapPin size={12} className="text-[#facc15]" /> 
-        {selectedEvent.venue || selectedEvent.location || "Venue TBD"}
-      </p>
-    </div>
-  </div>
-
-  {/* Right Column: Capacity & Deadline */}
-  <div className="space-y-4 border-l border-slate-50 pl-4">
-    <div>
-      <p className="font-black text-slate-400 uppercase text-[9px] mb-1 tracking-widest">Capacity</p>
-      <p className="font-bold text-slate-700">{selectedEvent.capacity || "Unlimited"}</p>
-    </div>
-    <div>
-      <p className="font-black text-slate-400 uppercase text-[9px] mb-1 tracking-widest">Reg. Deadline</p>
-      <p className="font-bold text-red-500">
-        {selectedEvent.registration_deadline 
-          ? selectedEvent.registration_deadline.split('T')[0] 
-          : "No Deadline"}
-      </p>
-    </div>
-  </div>
-</div>
-        {/* Description */}
-        <div className="mb-10">
-          <p className="text-[9px] font-black text-slate-400 uppercase mb-2 tracking-widest">About the Event</p>
-          <p className="text-slate-500 text-sm leading-relaxed max-h-32 overflow-y-auto scrollbar-hide">
-            {selectedEvent.description || "No description provided for this event."}
-          </p>
-        </div>
-
-        {/* Registration Button Logic */}
-        {myRegs.includes(selectedEvent.id) ? (
-          <div className="w-full py-4 bg-emerald-50 text-emerald-600 font-black uppercase tracking-[0.2em] rounded-xl flex items-center justify-center gap-2 border border-emerald-100">
-             Registered
+            <div className="rounded-2xl border border-white/15 bg-slate-950/75 p-4 text-white shadow-lg backdrop-blur-sm">
+              <div className="space-y-2.5 text-[13px]">
+                <InfoRow label="When" value={`${selectedEvent.date || 'Date TBD'} - ${selectedEvent.time || 'Time TBD'}`} />
+                <InfoRow label="Duration" value={getEventDuration(selectedEvent)} />
+                <InfoRow label="Venue" value={selectedEvent.venue || selectedEvent.location || 'Main Campus Hall'} />
+                <InfoRow
+                  label="Capacity"
+                  value={
+                    selectedEvent.capacity != null && selectedEvent.capacity !== ''
+                      ? `${selectedEvent.capacity} attendees`
+                      : 'Unlimited attendees'
+                  }
+                />
+                <InfoRow
+                  label="Registration Deadline"
+                  value={selectedEvent.registration_deadline ? selectedEvent.registration_deadline.split('T')[0] : 'No deadline'}
+                />
+              </div>
+              {myRegs.includes(selectedEvent.id) ? (
+                <div className="mt-4 w-full rounded-xl border border-emerald-400/35 bg-emerald-500/15 py-3 text-center text-xs font-black uppercase tracking-[0.2em] text-emerald-200">
+                  Registered
+                </div>
+              ) : (
+                <button
+                  disabled={isRegistering}
+                  onClick={() => handleRegister(selectedEvent)}
+                  className="mt-4 w-full rounded-xl bg-unity-yellow py-3 text-xs font-black uppercase tracking-[0.2em] text-unity-navy transition hover:brightness-95 disabled:opacity-50"
+                >
+                  {isRegistering ? 'Verifying...' : 'Register for this event'}
+                </button>
+              )}
+            </div>
           </div>
-        ) : (
-          <button
-            disabled={isRegistering}
-            onClick={() => handleRegister(selectedEvent)}
-            className="w-full py-4 bg-[#1d3a8a] text-[#facc15] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-blue-900 transition-all disabled:opacity-50"
-          >
-            {isRegistering ? "Verifying..." : "Confirm Registration"}
-          </button>
-        )}
+        </div>
+      </div>
+
+      <div className="bg-slate-50 px-6 py-8 sm:px-10">
+        <h3 className="mb-3 text-2xl font-bold text-slate-900">About this event</h3>
+        <p className="max-w-4xl text-slate-600 leading-relaxed">
+          {selectedEvent.description || 'No description provided for this event.'}
+        </p>
       </div>
     </div>
   </div>
 )}
-      </main>
+
+      {toast.show && (
+        <div className="fixed bottom-5 right-5 z-120 w-[min(92vw,360px)] rounded-xl border border-white/20 bg-[#0f1f52] p-4 text-white shadow-2xl">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider text-[#facc15]">
+                {toast.type === 'success' ? 'Success' : toast.type === 'error' ? 'Error' : 'Confirmation'}
+              </p>
+              <p className="mt-1 text-sm text-white/90">{toast.message}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setToast((prev) => ({ ...prev, show: false }))}
+              className="rounded-md p-1 text-white/70 transition hover:text-white"
+              aria-label="Close toast"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          {toast.mode === 'confirmLogout' && (
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setToast((prev) => ({ ...prev, show: false }))}
+                className="rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLogout}
+                className="rounded-lg bg-rose-500 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white transition hover:bg-rose-600"
+              >
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
+  </div>
   );
 };
 
-const FilterSelect = ({ label, options, value, onChange }) => (
-  <div>
+const FilterSelect = ({ allLabel, options, value, onChange }) => (
+  <div className="relative">
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 outline-none focus:border-unity-yellow focus:ring-2 focus:ring-unity-yellow/30 cursor-pointer"
-      aria-label={label}
+      className="h-12 w-full cursor-pointer appearance-none rounded-full border border-white/10 bg-[#0f2550]/80 py-2 pl-4 pr-10 text-sm font-medium text-white outline-none backdrop-blur-md transition focus:border-unity-yellow/60 focus:ring-2 focus:ring-unity-yellow/25"
+      aria-label={allLabel}
     >
-      <option value="all">All {label}s</option>
+      <option value="all">{allLabel}</option>
       {options.map((opt) => (
         <option key={opt} value={opt}>{opt}</option>
       ))}
     </select>
+    <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
   </div>
 );
 
 const EventCard = ({ event, onViewDetails }) => (
-  <article className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-unity-blue/10">
-    <div className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-unity-yellow/20 blur-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-    <div className="relative h-48 overflow-hidden bg-slate-100">
-      <img
-        src={event.image}
-        alt={event.title}
-        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-      />
-      <div className="absolute inset-0 bg-linear-to-t from-unity-navy/70 via-unity-navy/20 to-transparent" />
-      <div className="absolute left-3 top-3 flex flex-wrap gap-2 pr-3">
-        {event.categories.slice(0, 2).map((cat, index) => (
-          <span key={index} className="rounded-full border border-white/30 bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur">
+  <article
+    role="button"
+    tabIndex={0}
+    onClick={onViewDetails}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onViewDetails();
+      }
+    }}
+    className="group relative h-[400px] cursor-pointer overflow-hidden rounded-2xl border border-white/10 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-unity-blue/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-unity-yellow/70"
+  >
+    <img
+      src={event.image}
+      alt={event.title}
+      className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+    />
+    <div className="absolute inset-0 bg-linear-to-t from-black/95 via-black/55 to-black/15" />
+
+    <div className="absolute right-3 top-3 rounded-full bg-black/45 px-3 py-1 text-[10px] font-semibold text-white/90 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:opacity-100 translate-y-1">
+      Click to view details
+    </div>
+
+    <div className="absolute inset-x-0 bottom-0 p-4 text-white sm:p-5">
+      <h3 className="line-clamp-2 text-2xl font-black leading-tight">{event.title}</h3>
+      <p className="mt-2 text-[12px] text-white/90">
+        <span className="inline-flex items-center gap-1.5">
+          <Calendar size={13} className="text-unity-yellow" />
+          {event.date} {event.time}
+          {event.endDate && event.endTime ? `, ${event.endDate} ${event.endTime}` : ''}
+        </span>
+      </p>
+      <p className="mt-1 inline-flex min-w-0 items-center gap-1.5 text-[12px] text-white/85">
+        <MapPin size={13} className="shrink-0 text-unity-yellow" />
+        <span className="truncate">{event.location}</span>
+      </p>
+      <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-white/80">
+        {event.description || 'No description provided.'}
+      </p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {event.categories.slice(0, 3).map((cat, index) => (
+          <span
+            key={index}
+            className="rounded-md bg-unity-yellow px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-unity-navy"
+          >
             {cat}
           </span>
         ))}
       </div>
-      <div className="absolute top-3 right-3 rounded-full border border-unity-yellow/30 bg-unity-yellow px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-unity-navy shadow-sm">
-        Featured
-      </div>
-    </div>
-
-    <div className="p-5 flex min-h-[210px] flex-col">
-      <h3 className="text-xl font-bold leading-tight text-unity-navy mb-3 line-clamp-2">{event.title}</h3>
-      <div className="space-y-3 mb-5">
-        <p className="inline-flex items-center gap-2 rounded-lg bg-unity-blue/5 px-2.5 py-1.5 text-xs font-semibold text-unity-blue">
-          <Calendar size={14} /> {event.date} • {event.time}
-        </p>
-        <p className="flex items-start gap-2 text-sm text-slate-600">
-          <MapPin size={15} className="mt-0.5 text-unity-yellow shrink-0" />
-          <span className="line-clamp-1">{event.location}</span>
-        </p>
-        <p className="text-sm leading-relaxed text-slate-500 line-clamp-2">{event.description}</p>
-      </div>
-
-      <button onClick={onViewDetails}
-      className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-xl bg-unity-yellow py-2.5 text-sm font-bold text-unity-navy transition-all hover:brightness-95">
-        View Details
-        <ArrowUpRight size={14} />
-      </button>
-
-
-
     </div>
   </article>
+);
+
+const InfoRow = ({ label, value }) => (
+  <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-2 last:border-none last:pb-0">
+    <p className="text-[10px] font-black uppercase tracking-widest text-unity-yellow">{label}</p>
+    <p className="text-right text-xs font-semibold text-white/90">{value}</p>
+  </div>
 );
 
 export default EventDiscovery;
