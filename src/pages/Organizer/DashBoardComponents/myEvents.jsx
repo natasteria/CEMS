@@ -59,19 +59,37 @@ const MyEvents = ({ onCreateClick, onEditClick }) => {
     onEditClick(event);
   };
 
-  const openEventDetails = async (event) => {
+const openEventDetails = async (event) => {
     setSelectedEvent(event);
     setLoadingAttendees(true);
     try {
+      // We go: registrations -> students -> profiles
       const { data, error } = await supabase
         .from('registrations')
-        .select(`profiles ( id, first_name, last_name, email )`)
+        .select(`
+          id,
+          students (
+            profiles (
+              id,
+              first_name,
+              last_name,
+              email
+            )
+          )
+        `)
         .eq('event_id', event.id);
-      if (!error) setAttendees(data || []);
-    } catch (err) { 
+
+      if (error) throw error;
+      
+      // DEBUG: Look at your browser console (F12) to see this log!
+      console.log("Database response for attendees:", data);
+      
+      setAttendees(data || []);
+    } catch (err) {
+      console.error("Error fetching attendees:", err.message);
       setAttendees([]);
-    } finally { 
-      setLoadingAttendees(false); 
+    } finally {
+      setLoadingAttendees(false);
     }
   };
 
@@ -255,42 +273,67 @@ const MyEvents = ({ onCreateClick, onEditClick }) => {
             </div>
 
             {/* RIGHT: REGISTERED STUDENTS LIST */}
-            <div className="md:w-2/5 bg-[#003366] p-12 flex flex-col text-white">
-               <div className="flex items-center justify-between mb-10">
-                  <div>
-                    <h3 className="text-2xl font-black tracking-tight">Attendees</h3>
-                    <p className="text-blue-300 text-[10px] font-black uppercase mt-1 tracking-widest">Live Enrollment Feed</p>
-                  </div>
-                  <div className="bg-white/10 px-4 py-2 rounded-2xl border border-white/10 text-xl font-black">
-                    {attendees.length}
-                  </div>
-               </div>
+            {/* RIGHT: REGISTERED STUDENTS LIST */}
+<div className="md:w-2/5 bg-[#003366] p-12 flex flex-col text-white">
+  <div className="flex items-center justify-between mb-10">
+    <div>
+      <h3 className="text-2xl font-black tracking-tight">Attendees</h3>
+      <p className="text-blue-300 text-[10px] font-black uppercase mt-1 tracking-widest">
+        Live Enrollment Feed
+      </p>
+    </div>
+    <div className="bg-white/10 px-4 py-2 rounded-2xl border border-white/10 text-xl font-black">
+      {attendees.length}
+    </div>
+  </div>
 
-               <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar-white">
-                  {loadingAttendees ? (
-                    <div className="flex flex-col items-center justify-center h-full gap-4 opacity-40">
-                        <Loader2 className="animate-spin" size={32} />
-                        <p className="text-[10px] font-black uppercase">Fetching records...</p>
-                    </div>
-                  ) : attendees.length > 0 ? attendees.map((item, idx) => (
-                    <div key={idx} className="bg-white/5 p-5 rounded-[1.5rem] border border-white/5 flex items-center gap-4 group hover:bg-white/10 transition-all cursor-default">
-                       <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-sm font-black text-blue-200">
-                         {item.profiles?.first_name?.[0]}{item.profiles?.last_name?.[0]}
-                       </div>
-                       <div className="flex-1">
-                         <p className="font-bold text-white text-sm">{item.profiles?.first_name} {item.profiles?.last_name}</p>
-                         <p className="text-[10px] text-blue-300/60 font-black tracking-widest uppercase mt-1">ID: {item.profiles?.id.substring(0,12)}</p>
-                       </div>
-                       <CheckCircle size={14} className="text-emerald-400 opacity-20 group-hover:opacity-100 transition-all" />
-                    </div>
-                  )) : (
-                    <div className="h-full flex flex-col items-center justify-center opacity-20 text-center">
-                       <Users size={64} strokeWidth={1} />
-                       <p className="text-xs font-black uppercase mt-4 tracking-widest">No registrations yet</p>
-                    </div>
-                  )}
-               </div>
+  <div className="flex-1 overflow-y-auto pr-2 space-y-4 custom-scrollbar-white">
+    {loadingAttendees ? (
+      <div className="flex flex-col items-center justify-center h-full gap-4 opacity-40">
+        <Loader2 className="animate-spin" size={32} />
+        <p className="text-[10px] font-black uppercase">Loading records...</p>
+      </div>
+    ) : attendees.length > 0 ? (
+      attendees.map((item, idx) => {
+        // --- DATA EXTRACTION LOGIC ---
+        // Supabase returns the join as an object: item -> students -> profiles
+        const profile = item.students?.profiles;
+        
+        // If data is still missing, we use fallbacks
+        const fName = profile?.first_name || "Unknown";
+        const lName = profile?.last_name || "User";
+        const email = profile?.email || "";
+        const studentId = profile?.id || "N/A";
+
+        return (
+          <div key={idx} className="bg-white/5 p-5 rounded-[1.5rem] border border-white/5 flex items-center gap-4 group">
+            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-sm font-black text-blue-200 uppercase">
+              {fName[0]}{lName[0]}
             </div>
+            <div className="flex-1">
+              <p className="font-bold text-white text-sm leading-none mb-1.5">
+                {fName} {lName}
+              </p>
+              <p className="text-[9px] text-blue-300/60 font-black tracking-widest uppercase mt-1">
+                ID: {studentId.toString().substring(0, 12)}
+              </p>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+              <CheckCircle size={14} className="text-emerald-400" />
+            </div>
+          </div>
+        );
+      })
+    ) : (
+      <div className="h-full flex flex-col items-center justify-center opacity-20 text-center">
+        <Users size={64} strokeWidth={1} />
+        <p className="text-xs font-black uppercase mt-4 tracking-widest">
+          No registrations found
+        </p>
+      </div>
+    )}
+  </div>
+</div>
           </div>
         </div>
       )}
