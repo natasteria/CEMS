@@ -115,22 +115,24 @@ const EventDiscovery = () => {
     const fetchEvents = async () => {
       setLoadingEvents(true);
       const { data, error } = await supabase
-        .from('events')
-        .select(`
-          id,
-          title,
-          description,
-          start_datetime,
-          end_datetime,
-          venue,
-          categories,
-          image_url,
-          registration_deadline,
-          capacity
-        `)
-        .eq('status', 'approved')
-        .is('deleted_at', null)
-        .order('start_datetime', { ascending: true });
+      .from('events')
+      .select(`
+        id,
+        title,
+        description,
+        start_datetime,
+        end_datetime,
+        venue,
+        categories,
+        image_url,
+        registration_deadline,
+        capacity
+      `)
+      .eq('status', 'approved')
+      .is('deleted_at', null)
+      .gt('start_datetime', new Date().toISOString()) // ✅ upcoming events only
+      .or(`registration_deadline.is.null,registration_deadline.gt.${new Date().toISOString()}`) // ✅ valid deadline
+      .order('start_datetime', { ascending: true });
 
       if (error) {
         console.error(error.message);
@@ -313,14 +315,14 @@ const EventDiscovery = () => {
   <div className="relative min-h-screen overflow-hidden bg-white font-sans text-slate-900">
     
     {/* FULL PAGE GRID */}
-    <div
+    {/* <div
       className="pointer-events-none absolute inset-0"
       style={{
         backgroundImage:
           'linear-gradient(to right, rgba(19, 42, 92, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(19, 42, 92, 0.05) 1px, transparent 1px)',
         backgroundSize: '40px 40px'
       }}
-    />
+    /> */}
 
     <div className="relative z-10">
       <header className="bg-[#233f9c] border-b border-white/10 px-4 pb-8 pt-6 sm:px-8 lg:px-12">
