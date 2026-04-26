@@ -159,7 +159,17 @@ const StudentDashboard = () => {
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-900">
-      <nav className="sticky top-0 z-50 border-b border-white/10 bg-[#0f1f52]/95 px-8 py-3 text-white backdrop-blur lg:px-12">
+     <nav className="relative sticky top-0 z-50 border-b border-white/10 bg-[#0f1f52]/95 px-8 py-5 text-white backdrop-blur lg:px-12">
+
+        {/* GRID OVERLAY */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.15]"
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.15) 1px, transparent 1px)',
+            backgroundSize: '36px 36px'
+          }}
+        />
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-6">
             <span className="text-lg font-extrabold uppercase tracking-wider text-[#facc15]">Campus Core</span>
