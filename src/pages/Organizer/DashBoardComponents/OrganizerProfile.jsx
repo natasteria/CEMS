@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { 
   User, Building2, Mail, Phone, Calendar, 
-  Check, X, Loader2, ShieldCheck
+  Check, X, Loader2, ShieldCheck, Fingerprint
 } from 'lucide-react';
 
 const OrganizerProfile = ({ organizerData, onUpdate }) => {
@@ -12,25 +12,34 @@ const OrganizerProfile = ({ organizerData, onUpdate }) => {
     firstName: '',
     lastName: '',
     phone: '',
-    orgName: ''
+    orgName: '',
+    orgType: '' // Added to match schema
   });
 
+  // Load data from the joined database object
   useEffect(() => {
     if (organizerData) {
       setFormData({
         firstName: organizerData.first_name || '',
         lastName: organizerData.last_name || '',
         phone: organizerData.phone_number || '',
-        orgName: organizerData.organizers?.[0]?.organizer_name || ''
+        // In your schema, organizers is likely a single object or an array of 1
+        orgName: organizerData.organizers?.organizer_name || organizerData.organizers?.[0]?.organizer_name || '',
+        orgType: organizerData.organizers?.organizer_type || organizerData.organizers?.[0]?.organizer_type || 'Other'
       });
     }
   }, [organizerData]);
 
   const handleSave = async () => {
+    if (!formData.orgName.trim()) {
+      alert("Organization Name cannot be empty");
+      return;
+    }
+
     setLoading(true);
     try {
-      // 1. Update Profiles Table
-      const { error: pError } = await supabase
+      // 1. Update PROFILES table (matches schema: first_name, last_name, phone_number)
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({
           first_name: formData.firstName,
@@ -39,169 +48,168 @@ const OrganizerProfile = ({ organizerData, onUpdate }) => {
         })
         .eq('id', organizerData.id);
 
-      if (pError) throw pError;
+      if (profileError) throw profileError;
 
-      // 2. Update Organizers Table 
-      // FIX: Using 'id' based on your error. It matches the Auth ID.
-      const { error: oError } = await supabase
+      // 2. Update ORGANIZERS table (matches schema: id, organizer_name, organizer_type)
+      // We use upsert in case the row doesn't exist yet for this profile ID
+      const { error: orgError } = await supabase
         .from('organizers')
-        .update({ organizer_name: formData.orgName })
-        .eq('id', organizerData.id); // Changed from o_id to id
+        .upsert({
+          id: organizerData.id, // Primary Key in your schema
+          organizer_name: formData.orgName,
+          organizer_type: formData.orgType || 'Other' // Required by your schema NOT NULL
+        }, { onConflict: 'id' });
 
-      if (oError) throw oError;
+      if (orgError) throw orgError;
 
-      alert("Profile updated successfully!");
+      // 3. Close editing and trigger parent to re-fetch data from DB
       setIsEditing(false);
-      if (onUpdate) await onUpdate(); // Refresh the dashboard data
-
+      if (onUpdate) await onUpdate(); 
+      
+      alert("Profile updated successfully!");
     } catch (err) {
-      console.error(err);
-      alert("Update failed: " + err.message);
+      console.error("Save error:", err);
+      alert("Error: " + err.message);
     } finally {
       setLoading(false);
     }
   };
 
   const getInitials = () => {
-    const f = formData.firstName?.charAt(0) || "";
-    const l = formData.lastName?.charAt(0) || "";
-    return (f + l).toUpperCase() || "OR";
+    return `${formData.firstName?.charAt(0) || ''}${formData.lastName?.charAt(0) || ''}`.toUpperCase() || "OR";
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500">
+    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
       
-      {/* ── HEADER ── */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-black text-[#0f172a]">Organizer Profile</h1>
-        <p className="text-slate-500 text-sm">View and manage your organization account information.</p>
+      {/* HEADER SECTION */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 px-2">
+        <div>
+          <h1 className="text-3xl font-black text-[#003366] tracking-tight">Organizer Profile</h1>
+          <p className="text-slate-400 text-sm font-medium">Manage your campus organization identity.</p>
+        </div>
+        
+        <div className="flex gap-3">
+          {!isEditing ? (
+            <button 
+              onClick={() => setIsEditing(true)}
+              className="px-6 py-2.5 bg-[#003366] text-white rounded-xl font-bold text-sm hover:shadow-lg transition-all active:scale-95"
+            >
+              Edit Profile
+            </button>
+          ) : (
+            <>
+              <button 
+                onClick={() => setIsEditing(false)}
+                className="px-5 py-2.5 bg-slate-100 text-slate-500 rounded-xl font-bold text-sm hover:bg-slate-200 transition-all flex items-center gap-2"
+              >
+                <X size={16} /> Cancel
+              </button>
+              <button 
+                onClick={handleSave}
+                disabled={loading}
+                className="px-7 py-2.5 bg-[#facc15] text-[#003366] rounded-xl font-black text-sm hover:brightness-105 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />}
+                Save Changes
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 md:p-12">
-        
-        {/* ── TOP SECTION (Avatar & Buttons) ── */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
-          <div className="flex items-center gap-6">
-            <div className="relative">
-              <div className="w-24 h-24 bg-[#1e3a8a] rounded-full flex items-center justify-center text-white text-3xl font-black">
+      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-2xl shadow-slate-200/40 overflow-hidden">
+        {/* AVATAR BAR */}
+        <div className="bg-slate-50/50 p-6 md:p-10 border-b border-slate-100 flex flex-col md:flex-row items-center gap-6 md:gap-8">
+           <div className="relative">
+              <div className="w-24 h-24 md:w-28 md:h-28 bg-[#003366] rounded-full flex items-center justify-center text-white text-3xl md:text-4xl font-black shadow-xl">
                 {getInitials()}
               </div>
-              <div className="absolute bottom-1 right-1 w-5 h-5 bg-[#22c55e] border-4 border-white rounded-full"></div>
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-[#0f172a]">{formData.firstName} {formData.lastName}</h2>
-              <div className="flex items-center gap-2 text-slate-400 text-sm mt-1">
-                 <ShieldCheck size={16} className="text-yellow-500" />
-                 <span>Verified Organizer</span>
+              <div className="absolute -bottom-1 -right-1 bg-emerald-500 p-2 rounded-full border-4 border-white shadow-lg">
+                <ShieldCheck size={16} className="text-white" />
               </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            {!isEditing ? (
-              <button 
-                onClick={() => setIsEditing(true)}
-                className="px-8 py-2.5 bg-[#003366] text-white rounded-xl font-bold text-sm hover:brightness-110 transition-all"
-              >
-                Edit Profile
-              </button>
-            ) : (
-              <>
-                <button 
-                  onClick={() => setIsEditing(false)}
-                  className="px-6 py-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2"
-                >
-                  <X size={16} /> Cancel
-                </button>
-                <button 
-                  onClick={handleSave}
-                  disabled={loading}
-                  className="px-8 py-2.5 bg-[#eab308] text-white rounded-xl font-bold text-sm hover:brightness-105 transition-all flex items-center gap-2"
-                >
-                  {loading ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />}
-                  Save Changes
-                </button>
-              </>
-            )}
-          </div>
+           </div>
+           <div className="text-center md:text-left">
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+                {formData.firstName} {formData.lastName}
+              </h2>
+              <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 mt-2">
+                 <p className="text-blue-600 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+                    <Building2 size={14}/> {formData.orgName || "No Organization Set"}
+                 </p>
+                 <span className="hidden md:block text-slate-300">|</span>
+                 <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest flex items-center gap-2">
+                    <Fingerprint size={14} /> ID: {organizerData?.id?.slice(0,8)}
+                 </p>
+              </div>
+           </div>
         </div>
 
-        {/* ── FORM FIELDS (Matching Admin Sample Style) ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 border-t border-slate-100 pt-12">
-            
-            <InputGroup 
+        {/* FIELDS GRID */}
+        <div className="p-6 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+            <ProfileField 
               label="FIRST NAME" 
-              icon={<User size={18}/>} 
-              value={formData.firstName}
-              isEditing={isEditing}
-              onChange={(val) => setFormData({...formData, firstName: val})}
+              value={formData.firstName} 
+              isEditing={isEditing} 
+              onChange={(v) => setFormData({...formData, firstName: v})} 
             />
-
-            <InputGroup 
+            <ProfileField 
               label="LAST NAME" 
-              icon={<User size={18}/>} 
-              value={formData.lastName}
-              isEditing={isEditing}
-              onChange={(val) => setFormData({...formData, lastName: val})}
+              value={formData.lastName} 
+              isEditing={isEditing} 
+              onChange={(v) => setFormData({...formData, lastName: v})} 
             />
-
-            <InputGroup 
+            <ProfileField 
               label="ORGANIZATION NAME" 
-              icon={<Building2 size={18}/>} 
-              value={formData.orgName}
-              isEditing={isEditing}
-              onChange={(val) => setFormData({...formData, orgName: val})}
+              value={formData.orgName} 
+              isEditing={isEditing} 
+              placeholder="e.g. CS Department"
+              onChange={(v) => setFormData({...formData, orgName: v})} 
             />
-
-            <InputGroup 
+            <ProfileField 
               label="PHONE NUMBER" 
-              icon={<Phone size={18}/>} 
-              value={formData.phone}
-              isEditing={isEditing}
-              onChange={(val) => setFormData({...formData, phone: val})}
+              value={formData.phone} 
+              isEditing={isEditing} 
+              placeholder="09..."
+              onChange={(v) => setFormData({...formData, phone: v})} 
             />
 
-            <div className="flex items-center gap-4 opacity-70">
-              <div className="p-3 bg-slate-50 rounded-xl text-slate-400"><Mail size={18}/></div>
-              <div className="flex-1">
-                <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Email Address</label>
-                <p className="text-sm font-bold text-[#1e293b]">{organizerData?.email}</p>
-              </div>
+            <div className="opacity-50 px-1">
+              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Email Address</label>
+              <p className="text-sm font-bold text-slate-500 flex items-center gap-3">
+                <Mail size={16} className="text-slate-300" /> {organizerData?.email}
+              </p>
             </div>
 
-            <div className="flex items-center gap-4 opacity-70">
-              <div className="p-3 bg-slate-50 rounded-xl text-slate-400"><Calendar size={18}/></div>
-              <div className="flex-1">
-                <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Account Created</label>
-                <p className="text-sm font-bold text-[#1e293b]">April 20, 2026</p>
-              </div>
+            <div className="opacity-50 px-1">
+              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Account Type</label>
+              <p className="text-sm font-bold text-slate-500 flex items-center gap-3 capitalize">
+                <ShieldCheck size={16} className="text-slate-300" /> {organizerData?.role}
+              </p>
             </div>
-
         </div>
       </div>
     </div>
   );
 };
 
-// Sub-component for Inputs
-const InputGroup = ({ label, icon, value, isEditing, onChange }) => (
-  <div className="flex items-center gap-4 group">
-    <div className={`p-3 rounded-xl transition-all ${isEditing ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400'}`}>
-      {icon}
-    </div>
-    <div className="flex-1">
-      <label className="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-wider">{label}</label>
-      {isEditing ? (
-        <input 
-          type="text" 
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-        />
-      ) : (
-        <p className="text-sm font-bold text-[#1e293b]">{value || "Not set"}</p>
-      )}
-    </div>
+// Internal Field Component
+const ProfileField = ({ label, value, isEditing, onChange, placeholder }) => (
+  <div className="px-1">
+    <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">{label}</label>
+    {isEditing ? (
+      <input 
+        type="text" 
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 transition-all"
+      />
+    ) : (
+      <p className="text-sm font-bold text-slate-700 leading-relaxed border-b border-slate-100 pb-1">
+        {value || <span className="text-slate-300 italic font-normal">Not specified</span>}
+      </p>
+    )}
   </div>
 );
 

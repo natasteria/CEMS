@@ -20,7 +20,6 @@ const CreateEvent = ({ initialData, onRefresh }) => {
 
   const isEditMode = !!initialData;
 
-  // ── PRE-FILL FORM WHEN EDITING ──
   useEffect(() => {
     if (initialData && formRef.current) {
       const f = formRef.current;
@@ -47,7 +46,6 @@ const CreateEvent = ({ initialData, onRefresh }) => {
         setNoDeadline(true);
       }
 
-      // MATCHING SCHEMA: 'categories' (plural)
       setSelectedCategories(initialData.categories || []); 
       setIsUnlimited(!initialData.capacity);
       if (initialData.capacity) f.capacity.value = initialData.capacity;
@@ -98,7 +96,6 @@ const CreateEvent = ({ initialData, onRefresh }) => {
       const formData = new FormData(e.currentTarget)
       const { data: { user } } = await supabase.auth.getUser()
 
-      // Handle Image
       let final_image_url = previewUrl;
       const file = fileInputRef.current?.files?.[0];
       if (file) {
@@ -110,9 +107,8 @@ const CreateEvent = ({ initialData, onRefresh }) => {
 
       if (!final_image_url) throw new Error("Event poster is required");
 
-      // ── THE CRITICAL FIX: Matching your SQL Schema exactly ──
       const eventPayload = {
-        organizer_id: user.id, // Fixed: organizer_id
+        organizer_id: user.id,
         title: formData.get('title'),
         description: formData.get('description'),
         venue: formData.get('venue'),
@@ -121,23 +117,16 @@ const CreateEvent = ({ initialData, onRefresh }) => {
         end_datetime: new Date(`${formData.get('endDate')}T${formData.get('endTime')}`).toISOString(),
         registration_deadline: noDeadline ? null : new Date(`${formData.get('deadlineDate')}T${formData.get('deadlineTime')}`).toISOString(),
         image_url: final_image_url,
-        categories: selectedCategories, // Fixed: 'categories' with 's'
-        status: 'pending'              // Fixed: 'status' instead of 'event_status'
+        categories: selectedCategories,
+        status: 'pending' 
       }
 
       if (isEditMode) {
-        const { error } = await supabase
-          .from('events')
-          .update(eventPayload)
-          .eq('id', initialData.id); // Primary Key is 'id'
-
+        const { error } = await supabase.from('events').update(eventPayload).eq('id', initialData.id);
         if (error) throw error;
         showToast('Update submitted for review!', 'success');
       } else {
-        const { error } = await supabase
-          .from('events')
-          .insert([eventPayload]);
-
+        const { error } = await supabase.from('events').insert([eventPayload]);
         if (error) throw error;
         showToast('Event created successfully!', 'success');
       }
@@ -152,10 +141,10 @@ const CreateEvent = ({ initialData, onRefresh }) => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto pb-17 px-2 relative">
-      {/* Toast Feedback */}
+    <div className="max-w-6xl mx-auto pb-10 px-4 md:px-6 relative">
+      {/* Responsive Toast Feedback */}
       {toast.show && (
-        <div className={`fixed top-6 right-6 z-50 flex items-center justify-between w-80 md:w-96 px-5 py-4 rounded-xl shadow-2xl transition-all duration-300 ${
+        <div className={`fixed top-4 right-4 left-4 md:left-auto z-50 flex items-center justify-between md:w-96 px-5 py-4 rounded-xl shadow-2xl transition-all duration-300 ${
           toast.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'
         }`}>
           <p className="text-white text-sm font-medium">{toast.message}</p>
@@ -163,83 +152,86 @@ const CreateEvent = ({ initialData, onRefresh }) => {
         </div>
       )}
 
-      <header className="mb-6 flex justify-between items-end">
+      <header className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-           <h1 className="text-2xl font-bold text-slate-900">{isEditMode ? 'Edit Event' : 'Create New Event'}</h1>
-           <p className="text-sm text-slate-500 mt-1">Fill in the details below and submit for review.</p>
+           <h1 className="text-xl md:text-2xl font-bold text-slate-900">{isEditMode ? 'Edit Event' : 'Create New Event'}</h1>
+           <p className="text-xs md:text-sm text-slate-500 mt-1">Fill in the details below and submit for review.</p>
         </div>
-        {isEditMode && <button onClick={onRefresh} className="text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest">Cancel Edit</button>}
+        {isEditMode && <button onClick={onRefresh} className="text-[10px] md:text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest">Cancel Edit</button>}
       </header>
 
-      <hr className="border-unity-yellow border-t-2 w-16 mb-3" />
+      <hr className="border-unity-yellow border-t-2 w-16 mb-5" />
 
-      <form ref={formRef} onSubmit={handleSubmit} className="grid grid-cols-2 gap-10 items-start">
-        <div className="flex flex-col gap-6">
+      {/* Responsive Form Grid */}
+      <form ref={formRef} onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 items-start">
+        {/* LEFT COLUMN */}
+        <div className="flex flex-col gap-5 md:gap-6">
           <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Event Title *</label>
+            <label className="block text-[10px] md:text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Event Title *</label>
             <input name="title" type="text" required className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 focus:ring-2 focus:ring-unity-yellow outline-none" />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Description *</label>
+            <label className="block text-[10px] md:text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Description *</label>
             <textarea name="description" rows={4} required className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 focus:ring-2 focus:ring-unity-yellow outline-none" />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Categories (Max 3) *</label>
+            <label className="block text-[10px] md:text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Categories (Max 3) *</label>
             <div className="flex flex-wrap gap-2 p-3 border border-slate-200 rounded-lg bg-slate-50">
               {CATEGORIES.map(cat => (
-                <button key={cat} type="button" onClick={() => toggleCategory(cat)} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${selectedCategories.includes(cat) ? 'bg-unity-yellow text-unity-navy shadow-sm' : 'bg-white text-slate-600 border border-slate-200'}`}>{cat}</button>
+                <button key={cat} type="button" onClick={() => toggleCategory(cat)} className={`px-3 py-1 rounded-full text-[10px] md:text-xs font-medium transition-colors ${selectedCategories.includes(cat) ? 'bg-unity-yellow text-unity-navy shadow-sm' : 'bg-white text-slate-600 border border-slate-200'}`}>{cat}</button>
               ))}
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Event Image *</label>
-            <div onClick={() => fileInputRef.current?.click()} className="relative border-2 border-dashed border-slate-200 rounded-lg h-48 flex items-center justify-center bg-slate-50 hover:bg-slate-100 cursor-pointer overflow-hidden">
-              {previewUrl ? <img src={previewUrl} className="absolute inset-0 w-full h-full object-cover" /> : <div className="text-center"><ImageIcon className="mx-auto text-slate-400 mb-2" size={22} /><p className="text-xs text-slate-500">Upload Poster</p></div>}
+            <label className="block text-[10px] md:text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Event Image *</label>
+            <div onClick={() => fileInputRef.current?.click()} className="relative border-2 border-dashed border-slate-200 rounded-lg h-40 md:h-48 flex items-center justify-center bg-slate-50 hover:bg-slate-100 cursor-pointer overflow-hidden">
+              {previewUrl ? <img src={previewUrl} className="absolute inset-0 w-full h-full object-cover" /> : <div className="text-center"><ImageIcon className="mx-auto text-slate-400 mb-2" size={22} /><p className="text-[10px] md:text-xs text-slate-500">Upload Poster</p></div>}
             </div>
             <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
           </div>
         </div>
 
-        <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-2 gap-3">
+        {/* RIGHT COLUMN */}
+        <div className="flex flex-col gap-5 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Start Date *</label>
+              <label className="block text-[10px] md:text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Start Date *</label>
               <input name="startDate" type="date" required className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Start Time *</label>
+              <label className="block text-[10px] md:text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Start Time *</label>
               <input name="startTime" type="time" required className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50" />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">End Date *</label>
+              <label className="block text-[10px] md:text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">End Date *</label>
               <input name="endDate" type="date" required className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">End Time *</label>
+              <label className="block text-[10px] md:text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">End Time *</label>
               <input name="endTime" type="time" required className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50" />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Venue *</label>
-            <input name="venue" type="text" required className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50" />
+            <label className="block text-[10px] md:text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Venue *</label>
+            <input name="venue" type="text" required placeholder="Main Campus Hall 4" className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50" />
           </div>
 
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Deadline</label>
+              <label className="block text-[10px] md:text-xs font-semibold text-slate-500 uppercase tracking-wider">Deadline</label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={noDeadline} onChange={e => setNoDeadline(e.target.checked)} className="accent-unity-yellow" />
-                <span className="text-xs text-slate-500 italic">No deadline</span>
+                <span className="text-[10px] md:text-xs text-slate-500 italic">No deadline</span>
               </label>
             </div>
-            <div className={`grid grid-cols-2 gap-3 ${noDeadline ? 'opacity-30 pointer-events-none' : ''}`}>
+            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 ${noDeadline ? 'opacity-30 pointer-events-none' : ''}`}>
               <input name="deadlineDate" type="date" className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50" />
               <input name="deadlineTime" type="time" className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50" />
             </div>
@@ -247,18 +239,18 @@ const CreateEvent = ({ initialData, onRefresh }) => {
 
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Capacity</label>
+              <label className="block text-[10px] md:text-xs font-semibold text-slate-500 uppercase tracking-wider">Capacity</label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={isUnlimited} onChange={e => setIsUnlimited(e.target.checked)} className="accent-unity-yellow" />
-                <span className="text-xs text-slate-500">Unlimited</span>
+                <span className="text-[10px] md:text-xs text-slate-500">Unlimited</span>
               </label>
             </div>
             <input disabled={isUnlimited} name="capacity" type="number" className={`w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 ${isUnlimited ? 'opacity-30' : ''}`} />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <button type="reset" onClick={handleClear} className="px-6 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors">Clear</button>
-            <button type="submit" disabled={loading} className="flex-1 px-8 py-2 bg-unity-yellow text-unity-navy rounded-lg text-sm font-bold shadow-sm flex items-center justify-center gap-2">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 mb-10 md:mb-0">
+            <button type="reset" onClick={handleClear} className="w-full sm:w-auto px-6 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors">Clear</button>
+            <button type="submit" disabled={loading} className="w-full sm:flex-1 sm:px-8 py-2 bg-unity-yellow text-unity-navy rounded-lg text-sm font-bold shadow-sm flex items-center justify-center gap-2 disabled:opacity-50">
               {loading ? <Loader2 className="animate-spin" size={16}/> : isEditMode ? 'Save Changes' : 'Create Event'}
             </button>
           </div>
