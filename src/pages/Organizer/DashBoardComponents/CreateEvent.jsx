@@ -21,36 +21,59 @@ const CreateEvent = ({ initialData, onRefresh }) => {
   const isEditMode = !!initialData;
 
   useEffect(() => {
-    if (initialData && formRef.current) {
-      const f = formRef.current;
+    if (!formRef.current) return;
+  
+    const f = formRef.current;
+  
+    if (initialData) {
       f.title.value = initialData.title || '';
       f.description.value = initialData.description || '';
       f.venue.value = initialData.venue || '';
-      
-      if (initialData.start_datetime) {
-        const start = new Date(initialData.start_datetime);
-        f.startDate.value = start.toISOString().split('T')[0];
-        f.startTime.value = start.toTimeString().slice(0, 5);
-      }
-      if (initialData.end_datetime) {
-        const end = new Date(initialData.end_datetime);
-        f.endDate.value = end.toISOString().split('T')[0];
-        f.endTime.value = end.toTimeString().slice(0, 5);
-      }
+  
+      const [startDate, startTime] =
+        initialData.start_datetime.split('T');
+  
+      f.startDate.value = startDate;
+      f.startTime.value = startTime.slice(0, 5);
+  
+      const [endDate, endTime] =
+        initialData.end_datetime.split('T');
+  
+      f.endDate.value = endDate;
+      f.endTime.value = endTime.slice(0, 5);
+  
       if (initialData.registration_deadline) {
-        const dead = new Date(initialData.registration_deadline);
-        f.deadlineDate.value = dead.toISOString().split('T')[0];
-        f.deadlineTime.value = dead.toTimeString().slice(0, 5);
+        const [deadlineDate, deadlineTime] =
+          initialData.registration_deadline.split('T');
+  
+        f.deadlineDate.value = deadlineDate;
+        f.deadlineTime.value = deadlineTime.slice(0, 5);
+  
         setNoDeadline(false);
       } else {
+        f.deadlineDate.value = '';
+        f.deadlineTime.value = '';
         setNoDeadline(true);
       }
-
-      setSelectedCategories(initialData.categories || []); 
+  
+      setSelectedCategories(initialData.categories || []);
+  
       setIsUnlimited(!initialData.capacity);
-      if (initialData.capacity) f.capacity.value = initialData.capacity;
-      setPreviewUrl(initialData.image_url);
+  
+      f.capacity.value = initialData.capacity || '';
+  
+      setPreviewUrl(initialData.image_url || null);
+  
+    } else {
+  
+      f.reset();
+  
+      setSelectedCategories([]);
+      setNoDeadline(false);
+      setIsUnlimited(false);
+      setPreviewUrl(null);
     }
+  
   }, [initialData]);
 
   useEffect(() => {
@@ -107,18 +130,47 @@ const CreateEvent = ({ initialData, onRefresh }) => {
 
       if (!final_image_url) throw new Error("Event poster is required");
 
+      let nextStatus = 'pending';
+
+      if (isEditMode) {
+        const currentStatus = initialData.status?.toLowerCase();
+
+        switch (currentStatus) {
+          case 'approved':
+            nextStatus = 'edited';
+            break;
+
+          case 'rejected':
+            nextStatus = 'resubmitted';
+            break;
+
+          case 'edited':
+            nextStatus = 'edited';
+            break;
+
+          case 'resubmitted':
+            nextStatus = 'resubmitted';
+            break;
+
+          case 'pending':
+          default:
+            nextStatus = 'pending';
+            break;
+        }
+      }
+
       const eventPayload = {
         organizer_id: user.id,
         title: formData.get('title'),
         description: formData.get('description'),
         venue: formData.get('venue'),
         capacity: isUnlimited ? null : Number(formData.get('capacity')),
-        start_datetime: new Date(`${formData.get('startDate')}T${formData.get('startTime')}`).toISOString(),
-        end_datetime: new Date(`${formData.get('endDate')}T${formData.get('endTime')}`).toISOString(),
-        registration_deadline: noDeadline ? null : new Date(`${formData.get('deadlineDate')}T${formData.get('deadlineTime')}`).toISOString(),
+        start_datetime: `${formData.get('startDate')}T${formData.get('startTime')}`,
+        end_datetime: `${formData.get('endDate')}T${formData.get('endTime')}`,
+        registration_deadline: noDeadline ? null : `${formData.get('deadlineDate')}T${formData.get('deadlineTime')}`,
         image_url: final_image_url,
         categories: selectedCategories,
-        status: 'pending' 
+        status: nextStatus 
       }
 
       if (isEditMode) {
