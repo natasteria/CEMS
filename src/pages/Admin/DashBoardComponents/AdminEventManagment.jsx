@@ -103,6 +103,41 @@ const AdminEventManagement = () => {
     setLoading(false);
   };
 
+  const handleDeleteEvent = async (eventId) => {
+    const confirmed = window.confirm(
+      'Are you sure you want to remove this event?'
+    );
+  
+    if (!confirmed) return;
+  
+    setLoading(true);
+  
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+  
+      const { error } = await supabase
+        .from('events')
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: user.id,
+          deletion_note: 'Removed by administrator'
+        })
+        .eq('id', eventId);
+  
+      if (error) throw error;
+  
+      await fetchEvents();
+  
+      if (selectedEvent?.id === eventId) {
+        closeModal();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredEvents = activeTab === 'ALL' 
     ? events 
     : events.filter(e => e.status.toUpperCase() === activeTab);
@@ -182,7 +217,15 @@ const AdminEventManagement = () => {
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2 text-gray-400">
-                    <button className="p-1.5 hover:text-rose-600"><Trash2 size={16}/></button>
+                  <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteEvent(event.id);
+                      }}
+                      className="p-1.5 hover:text-rose-600"
+                      >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </td>
               </tr>

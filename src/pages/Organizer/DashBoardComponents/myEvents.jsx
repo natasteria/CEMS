@@ -41,6 +41,7 @@ const MyEvents = ({ onCreateClick, onEditClick }) => {
         .from('events')
         .select('*, registrations(count)')
         .eq('organizer_id', user.id)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
       setEvents(data || []);
@@ -71,13 +72,29 @@ const MyEvents = ({ onCreateClick, onEditClick }) => {
 
   const handleDelete = async (e, id) => {
     e.stopPropagation();
-    if (!id || !window.confirm("Delete this event permanently?")) return;
+  
+    if (!id || !window.confirm("Delete this event?")) return;
+  
     try {
-      const { error } = await supabase.from('events').delete().eq('id', id);
-      if (!error) {
-        setEvents(prev => prev.filter(ev => ev.id !== id));
-      }
-    } catch (err) { console.error(err); }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+  
+      const { error } = await supabase
+        .from('events')
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: user.id,
+          deletion_note: 'Deleted by organizer',
+        })
+        .eq('id', id);
+  
+      if (error) throw error;
+  
+      setEvents(prev => prev.filter(ev => ev.id !== id));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleEdit = (e, event) => {
