@@ -17,6 +17,8 @@ const MyEvents = ({ onCreateClick, onEditClick }) => {
   const [attendees, setAttendees] = useState([]);
   const [loadingAttendees, setLoadingAttendees] = useState(false);
 
+  const [rejectionNote, setRejectionNote] = useState(null);
+
   useEffect(() => {
     fetchEvents();
     const handleEsc = (e) => {
@@ -48,6 +50,21 @@ const MyEvents = ({ onCreateClick, onEditClick }) => {
       if (silent) setRefreshing(false);
       else setLoading(false);
     }
+  };
+
+  const fetchRejectionNote = async (eventId) => {
+    const { data, error } = await supabase
+      .from('event_status')
+      .select('rejection_note')
+      .eq('event_id', eventId)
+      .eq('status_assigned', 'rejected')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+  
+    if (error) return null;
+  
+    return data?.rejection_note;
   };
 
   const handleRefresh = () => fetchEvents({ silent: true });
@@ -92,9 +109,14 @@ const MyEvents = ({ onCreateClick, onEditClick }) => {
     setSelectedEvent(null);
   };
 
-  const openEventDetails = (event) => {
+  const openEventDetails = async (event) => {
     setSelectedEvent(event);
-    setShowAttendeeModal(false);
+    setRejectionNote(null);
+  
+    if (event.status === 'rejected') {
+      const note = await fetchRejectionNote(event.id);
+      setRejectionNote(note);
+    }
   };
 
   const now = new Date();
@@ -359,6 +381,19 @@ const MyEvents = ({ onCreateClick, onEditClick }) => {
                   ● {selectedEvent.status?.toUpperCase()}
                 </span>
               </div>
+              {selectedEvent.status === 'rejected' && rejectionNote && (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-rose-500 mb-2">
+                    Rejection Reason
+                  </p>
+
+                  <div className="rounded-xl bg-rose-50 border border-rose-200 px-4 py-3">
+                    <p className="text-sm text-rose-700 whitespace-pre-wrap">
+                      {rejectionNote}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-2">Description</p>

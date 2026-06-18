@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { Loader2, User, Calendar, Users, Shield } from 'lucide-react';
+import { Loader2, User, Calendar, Users, Shield, LogOut } from 'lucide-react';
 
 // Pages that render inside main area
 import AdminProfile from './DashBoardComponents/AdminProfile';
@@ -71,6 +71,17 @@ const AdminDashboard = () => {
     };
 
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.replace('/'); 
+    } catch (err) {
+      window.location.replace('/');
+    }
+  };
 
   const renderContent = () => {
 
@@ -186,6 +197,10 @@ const AdminDashboard = () => {
           </button>
 
         </nav>
+
+        <button onClick={handleLogout} className="mt-auto m-4 flex items-center gap-3 p-3 text-red-300 hover:bg-red-500/10 rounded-xl transition-all font-bold text-sm">
+          <LogOut size={18} /> Logout
+        </button>
 
       </aside>
 
