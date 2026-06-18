@@ -137,7 +137,7 @@ const LoginPage = () => {
                 htmlFor="email"
                 className="block text-[10px] font-bold uppercase tracking-wider text-gray-500"
               >
-                University Email
+                 Email
               </label>
 
               <input
@@ -203,12 +203,12 @@ const LoginPage = () => {
             </p>
 
             <p>
-              <a
-                href="#"
+              <Link
+                to="/password-reset/forgot-password"
                 className="text-xs text-gray-400 hover:text-gray-600"
               >
                 Forgot Password?
-              </a>
+              </Link>
             </p>
 
           </footer>
