@@ -24,7 +24,14 @@ const PendingReview = () => {
       // .maybeSingle() prevents 406 errors if the row hasn't been created yet
       const { data, error } = await supabase
         .from('organizers')
-        .select('registration_status, organizer_name')
+        .select(`
+          registration_status, 
+          organizer_name,
+          profiles (
+            first_name,
+            last_name
+          )
+        `)
         .eq('id', user.id)
         .maybeSingle();
 
@@ -39,7 +46,7 @@ const PendingReview = () => {
       // 3. If the row exists, update state and stop loading
       if (data && isMounted) {
         setStatus(data.registration_status);
-        setOrganizerName(data.organizer_name);
+        setOrganizerName(`${data.organizer_name} (${data.profiles?.first_name} ${data.profiles?.last_name})`);
         setLoading(false);
 
         // 4. Handle Redirection
@@ -117,7 +124,7 @@ const PendingReview = () => {
         <div className="p-8">
           <p className="text-slate-600 leading-relaxed mb-12">
             To maintain the safety of the Unity community, we manually review every organizer application.
-            This page will automatically redirect once your account is activated.
+            Once your account is reviewed, You will recieve an email notification.
           </p>
 
           {/* Progress Stepper */}

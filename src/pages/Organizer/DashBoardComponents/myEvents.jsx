@@ -6,8 +6,10 @@ import {
   Loader2, X, MapPin, ImageIcon, Infinity,
   ChevronLeft, Clock
 } from 'lucide-react';
+import { useNotification } from '../../../context/NotificationContext';
 
 const MyEvents = ({ onCreateClick, onEditClick }) => {
+  const { showNotification } = useNotification();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -82,28 +84,39 @@ const MyEvents = ({ onCreateClick, onEditClick }) => {
   const handleDelete = async (e, id) => {
     e.stopPropagation();
   
-    if (!id || !window.confirm("Delete this event?")) return;
-  
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-  
-      const { error } = await supabase
-        .from('events')
-        .update({
-          deleted_at: new Date().toISOString(),
-          deleted_by: user.id,
-          deletion_note: 'Deleted by organizer',
-        })
-        .eq('id', id);
-  
-      if (error) throw error;
-  
-      setEvents(prev => prev.filter(ev => ev.id !== id));
-    } catch (err) {
-      console.error(err);
-    }
+    if (!id) return;
+
+    showNotification(
+      "Are you sure you want to delete this event? This action will hide it from everyone.",
+      "warning",
+      "confirm",
+      {
+        onConfirm: async () => {
+          try {
+            const {
+              data: { user },
+            } = await supabase.auth.getUser();
+        
+            const { error } = await supabase
+              .from('events')
+              .update({
+                deleted_at: new Date().toISOString(),
+                deleted_by: user.id,
+                deletion_note: 'Deleted by organizer',
+              })
+              .eq('id', id);
+        
+            if (error) throw error;
+        
+            setEvents(prev => prev.filter(ev => ev.id !== id));
+            showNotification("Event deleted successfully", "success");
+          } catch (err) {
+            console.error(err);
+            showNotification("Failed to delete event", "error");
+          }
+        }
+      }
+    );
   };
 
   const handleEdit = (e, event) => {

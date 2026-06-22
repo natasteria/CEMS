@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { User, Mail, Phone, ShieldCheck, Calendar, Pencil, X, Check } from "lucide-react";
 import { supabase } from "../../../lib/supabaseClient";
+import { useNotification } from "../../../context/NotificationContext";
 
 const AdminProfile = () => {
+  const { showNotification } = useNotification();
   const [adminProfile, setAdminProfile] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -92,9 +94,10 @@ const AdminProfile = () => {
       }));
 
       setIsEditing(false);
+      showNotification("Profile updated successfully!", "success");
     } catch (err) {
       console.error(err);
-      alert("Failed to update profile");
+      showNotification("Failed to update profile", "error");
     } finally {
       setSaving(false);
     }

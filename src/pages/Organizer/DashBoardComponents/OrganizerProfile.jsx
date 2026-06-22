@@ -4,8 +4,10 @@ import {
   User, Building2, Mail, Phone, Calendar, 
   Check, X, Loader2, ShieldCheck, Fingerprint
 } from 'lucide-react';
+import { useNotification } from '../../../context/NotificationContext';
 
 const OrganizerProfile = ({ organizerData, onUpdate }) => {
+  const { showNotification } = useNotification();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -32,7 +34,7 @@ const OrganizerProfile = ({ organizerData, onUpdate }) => {
 
   const handleSave = async () => {
     if (!formData.orgName.trim()) {
-      alert("Organization Name cannot be empty");
+      showNotification("Organization Name cannot be empty", 'warning');
       return;
     }
 
@@ -66,10 +68,10 @@ const OrganizerProfile = ({ organizerData, onUpdate }) => {
       setIsEditing(false);
       if (onUpdate) await onUpdate(); 
       
-      alert("Profile updated successfully!");
+      showNotification("Profile updated successfully!", "success");
     } catch (err) {
       console.error("Save error:", err);
-      alert("Error: " + err.message);
+      showNotification("Error: " + err.message, "error");
     } finally {
       setLoading(false);
     }
@@ -148,13 +150,13 @@ const OrganizerProfile = ({ organizerData, onUpdate }) => {
         {/* FIELDS GRID */}
         <div className="p-6 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
             <ProfileField 
-              label="FIRST NAME" 
+              label="PRIMARY CONTACT FIRST NAME" 
               value={formData.firstName} 
               isEditing={isEditing} 
               onChange={(v) => setFormData({...formData, firstName: v})} 
             />
             <ProfileField 
-              label="LAST NAME" 
+              label="PRIMARY CONTACT LAST NAME" 
               value={formData.lastName} 
               isEditing={isEditing} 
               onChange={(v) => setFormData({...formData, lastName: v})} 

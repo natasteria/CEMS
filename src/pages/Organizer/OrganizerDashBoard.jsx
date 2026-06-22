@@ -85,7 +85,10 @@ const OrganizerDashboard = () => {
       
       {/* --- Mobile Header --- */}
       <div className="lg:hidden fixed top-0 w-full bg-[#003366] text-white p-4 flex justify-between items-center z-30 shadow-md">
-        <h2 className="font-bold truncate text-sm">{details?.organizer_name || "Organizer"}</h2>
+        <div className="flex flex-col">
+          <h2 className="font-bold truncate text-sm">{details?.organizer_name || "Organizer"}</h2>
+          <span className="text-[10px] text-white/70 italic">Primary Contact: {organizerData?.first_name} {organizerData?.last_name}</span>
+        </div>
         <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-white/10 rounded-lg">
           <Menu size={24} />
         </button>
@@ -107,6 +110,7 @@ const OrganizerDashboard = () => {
         <div className="p-6 border-b border-white/10 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-bold truncate">{details?.organizer_name || "Organizer"}</h2>
+            <p className="text-xs text-white/80 font-medium mb-1">Contact: {organizerData?.first_name} {organizerData?.last_name}</p>
             <p className="text-xs text-white/60 truncate mb-2">{organizerData?.email}</p>
             <div className="flex flex-wrap gap-2">
               <span className="flex items-center gap-1 px-2 py-1 rounded bg-white/10 text-[10px] uppercase tracking-wider">

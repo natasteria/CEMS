@@ -13,10 +13,13 @@ import ResetPassword from './pages/PasswordReset/ResetPassword';
 import OrganizerDashboard from './pages/Organizer/OrganizerDashboard';
 import StudentDashboard from './pages/Student/PersonalDashboard';
 
+import { NotificationProvider } from './context/NotificationContext';
+
 function App() {
   return (
-    <Router>
-      <Routes>
+    <NotificationProvider>
+      <Router>
+        <Routes>
 
         {/* Organizer Routes */}
         <Route path="/register-organizer" element={<OrganizerRegistration />} />
@@ -44,6 +47,7 @@ function App() {
 
       </Routes>
     </Router>
+    </NotificationProvider>
   );
 }
 

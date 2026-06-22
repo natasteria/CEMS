@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
-import { Building2, Mail, Lock, Phone, ChevronDown, Search, Filter, Bell } from 'lucide-react';
+import { Building2, Mail, Lock, Phone, ChevronDown, Search, Filter, Bell, User } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 
+import { useNotification } from '../../context/NotificationContext';
+
 const OrganizerRegistration = () => {
+  const { showNotification } = useNotification();
   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
     organizerName: '',
     organizerType: '',
     email: '',
@@ -31,6 +36,8 @@ const OrganizerRegistration = () => {
         options: {
           data: {
             role: 'organizer',
+            first_name: formData.firstName,
+            last_name: formData.lastName,
             phone_number: formData.phone,
             organizer_name: formData.organizerName,
             organizer_type: formData.organizerType
@@ -45,7 +52,7 @@ const OrganizerRegistration = () => {
         navigate('/organizer-pending');
       }
     } catch (error) {
-      alert(error.message);
+      showNotification(error.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -55,115 +62,167 @@ const OrganizerRegistration = () => {
     <div className="h-screen w-screen overflow-hidden bg-white font-sans">
       <main className="flex flex-col lg:flex-row h-full">
         {/* Left Section: Form */}
-        <section className="w-full lg:w-3/5 p-6 md:p-12 lg:p-16 bg-white flex flex-col justify-center overflow-y-auto">
-          <div className="max-w-xl mx-auto w-full">
-            <header className="mb-8">
+        <section className="w-full lg:w-3/5 p-6 md:p-10 lg:p-12 bg-white flex flex-col justify-center overflow-y-auto">
+          <div className="max-w-2xl mx-auto w-full">
+            <header className="mb-6">
               <h1 className="text-3xl font-black text-unity-navy tracking-tight">
                 Create Organizer Account
               </h1>
-              <p className="text-slate-500 text-sm mt-2 font-medium">
-                Register your department or club to start hosting campus events.
+              <p className="text-slate-400 text-xs mt-1 font-medium">
+                Register your department or club to join the campus event network.
               </p>
             </header>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
               {/* Organization Identity */}
-              <section className="space-y-4">
+              <section className="space-y-3">
                 <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100 pb-2">
                   Organization Identity
                 </h2>
-                <div className="space-y-3">
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="relative group">
+                    <Building2 className="absolute left-3 top-3.5 text-slate-400 w-4 h-4 group-focus-within:text-unity-blue transition-colors" />
                     <input
                       type="text"
                       name="organizerName"
-                      placeholder="Organizer Name (e.g. CS Department)"
+                      placeholder="Organization Name (e.g. CS Department)"
                       required
                       value={formData.organizerName}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-unity-blue outline-none transition text-sm font-medium"
+                      className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-unity-blue/10 focus:border-unity-blue outline-none transition-all text-sm font-medium"
                     />
                   </div>
-                  <div className="relative">
+                  <div className="relative group">
                     <select
                       name="organizerType"
                       required
                       value={formData.organizerType}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-unity-blue outline-none transition appearance-none cursor-pointer text-sm font-medium text-slate-700"
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white focus:ring-4 focus:ring-unity-blue/10 focus:border-unity-blue outline-none transition-all appearance-none cursor-pointer text-sm font-medium text-slate-700"
                     >
                       <option value="" disabled>Select Organizer Type</option>
                       <option value="student-club">Student Club</option>
                       <option value="academic-department">Academic Department</option>
                     </select>
-                    <ChevronDown className="absolute right-4 top-3.5 text-slate-400 w-4 h-4 pointer-events-none" />
+                    <ChevronDown className="absolute right-4 top-4 text-slate-400 w-4 h-4 pointer-events-none" />
                   </div>
                 </div>
               </section>
 
-              {/* Contact & Security */}
-              <section className="space-y-4 pt-2">
+              {/* Primary Contact */}
+              <section className="space-y-3">
                 <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100 pb-2">
-                  Contact & Login Information
+                  Primary Contact Information
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
-                    <input
-                      type="email"
-                      name="email"
-                      placeholder="Email Address"
-                      required
-                      value={formData.email}
-                      onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-unity-blue outline-none transition text-sm font-medium"
-                    />
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">First Name</label>
+                    <div className="relative group">
+                      <User className="absolute left-3 top-3 text-slate-400 w-4 h-4 group-focus-within:text-unity-blue transition-colors" />
+                      <input
+                        type="text"
+                        name="firstName"
+                        placeholder="First Name"
+                        required
+                        value={formData.firstName}
+                        onChange={handleChange}
+                        className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-unity-blue/10 focus:border-unity-blue outline-none transition-all text-sm font-medium"
+                      />
+                    </div>
                   </div>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
-                    <input
-                      type="tel"
-                      name="phone"
-                      placeholder="Phone Number"
-                      required
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-unity-blue outline-none transition text-sm font-medium"
-                    />
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">Last Name</label>
+                    <div className="relative group">
+                      <User className="absolute left-3 top-3 text-slate-400 w-4 h-4 group-focus-within:text-unity-blue transition-colors" />
+                      <input
+                        type="text"
+                        name="lastName"
+                        placeholder="Last Name"
+                        required
+                        value={formData.lastName}
+                        onChange={handleChange}
+                        className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-unity-blue/10 focus:border-unity-blue outline-none transition-all text-sm font-medium"
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
-                  <input
-                    type="password"
-                    name="password"
-                    placeholder="Create Password"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-unity-blue outline-none transition text-sm font-medium"
-                  />
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">Phone Number</label>
+                    <div className="relative group">
+                      <Phone className="absolute left-3 top-3 text-slate-400 w-4 h-4 group-focus-within:text-unity-blue transition-colors" />
+                      <input
+                        type="tel"
+                        name="phone"
+                        placeholder="Phone"
+                        required
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-unity-blue/10 focus:border-unity-blue outline-none transition-all text-sm font-medium"
+                      />
+                    </div>
+                  </div>
                 </div>
               </section>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-unity-blue text-white py-4 rounded-xl font-bold hover:bg-unity-navy transition-all shadow-lg shadow-blue-900/20 active:scale-[0.98] disabled:opacity-70"
-              >
-                {loading ? "Registering..." : "Create Organizer Account"}
-              </button>
+              {/* Credentials */}
+              <section className="space-y-3">
+                <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100 pb-2">
+                  Account Credentials
+                </h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">Email Address</label>
+                    <div className="relative group">
+                      <Mail className="absolute left-3 top-3 text-slate-400 w-4 h-4 group-focus-within:text-unity-blue transition-colors" />
+                      <input
+                        type="email"
+                        name="email"
+                        placeholder="Email Address"
+                        required
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-unity-blue/10 focus:border-unity-blue outline-none transition-all text-sm font-medium"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">Password</label>
+                    <div className="relative group">
+                      <Lock className="absolute left-3 top-3 text-slate-400 w-4 h-4 group-focus-within:text-unity-blue transition-colors" />
+                      <input
+                        type="password"
+                        name="password"
+                        placeholder="Create Password"
+                        required
+                        value={formData.password}
+                        onChange={handleChange}
+                        className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-unity-blue/10 focus:border-unity-blue outline-none transition-all text-sm font-medium"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </section>
 
-            <p className="text-center text-sm text-gray-500">
-              Already have an account?{" "}
-              <Link
-                to="/"
-                className="text-unity-blue font-semibold hover:underline"
-              >
-                Login
-              </Link>
-            </p>
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-unity-blue text-white py-3.5 rounded-xl font-bold hover:bg-unity-navy transition-all shadow-lg shadow-blue-900/10 active:scale-[0.98] disabled:opacity-70 text-sm"
+                >
+                  {loading ? "Registering..." : "Create Organizer Account"}
+                </button>
+
+                <p className="text-center text-xs text-gray-500 mt-4">
+                  Already have an account?{" "}
+                  <Link
+                    to="/"
+                    className="text-unity-blue font-semibold hover:underline"
+                  >
+                    Login
+                  </Link>
+                </p>
+              </div>
             </form>
           </div>
         </section>

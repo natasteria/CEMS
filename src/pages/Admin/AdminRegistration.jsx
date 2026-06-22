@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
+import { useNotification } from '../../context/NotificationContext';
 
 const AdminRegistrationForm = () => {
+  const { showNotification } = useNotification();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -42,7 +44,7 @@ const AdminRegistrationForm = () => {
         // auto-login if session exists
         navigate('/admin-dashboard'); 
       } else {
-        alert('Admin registered successfully! Check email for confirmation if required.');
+        showNotification('Admin registered successfully! Check email for confirmation.', 'success');
       }
 
       // reset form
@@ -50,9 +52,9 @@ const AdminRegistrationForm = () => {
 
     } catch (err) {
       if (err.message.includes('already registered')) {
-        alert('This email is already registered.');
+        showNotification('This email is already registered.', 'error');
       } else {
-        alert(`Error: ${err.message}`);
+        showNotification(`Error: ${err.message}`, 'error');
       }
     } finally {
       setLoading(false);

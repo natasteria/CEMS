@@ -2,14 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, LogOut, MapPin, Calendar, Loader2, User, ChevronDown } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
+import { useNotification } from '../../context/NotificationContext';
 
 const EventDiscovery = () => {
   const navigate = useNavigate();
+  const { showNotification } = useNotification();
   const searchInputRef = useRef(null);
-  // Add these two lines at the top of your component function
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [myRegs, setMyRegs] = useState([]); // This tracks which events YOU have joined
+  const [myRegs, setMyRegs] = useState([]);
 
   // ---------------- STUDENT STATE ----------------
   const [student, setStudent] = useState(null);
@@ -24,42 +25,23 @@ const EventDiscovery = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
 
-  const [toast, setToast] = useState({
-    show: false,
-    type: 'info',
-    message: '',
-    mode: 'notice'
-  });
-
-  const showNotice = (message, type = 'info') => {
-    setToast({ show: true, type, message, mode: 'notice' });
-  };
-
   const handleLogoutRequest = () => {
-    setToast({
-      show: true,
-      type: 'warning',
-      message: 'Are you sure you want to log out?',
-      mode: 'confirmLogout'
-    });
+    showNotification(
+      'Are you sure you want to log out?',
+      'warning',
+      'confirm',
+      {
+        onConfirm: async () => {
+          const { error } = await supabase.auth.signOut();
+          if (error) {
+            showNotification(error.message || 'Logout failed. Please try again.', 'error');
+            return;
+          }
+          navigate('/');
+        }
+      }
+    );
   };
-
-  const handleConfirmLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      showNotice(error.message || 'Logout failed. Please try again.', 'error');
-      return;
-    }
-    navigate('/');
-  };
-
-  useEffect(() => {
-    if (!toast.show || toast.mode !== 'notice') return undefined;
-    const timer = setTimeout(() => {
-      setToast((prev) => ({ ...prev, show: false }));
-    }, 3200);
-    return () => clearTimeout(timer);
-  }, [toast.show, toast.mode]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -114,24 +96,28 @@ const EventDiscovery = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       setLoadingEvents(true);
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // 1. Fetch my registrations
+      if (user) {
+        const { data: regs } = await supabase
+          .from('registrations')
+          .select('event_id')
+          .eq('student_id', user.id);
+        setMyRegs(regs?.map(r => r.event_id) || []);
+      }
+
+      // 2. Fetch events with registration counts
       const { data, error } = await supabase
       .from('events')
       .select(`
-        id,
-        title,
-        description,
-        start_datetime,
-        end_datetime,
-        venue,
-        categories,
-        image_url,
-        registration_deadline,
-        capacity
+        *,
+        registrations(count)
       `)
       .eq('status', 'approved')
       .is('deleted_at', null)
-      .gt('start_datetime', new Date().toISOString()) // ✅ upcoming events only
-      .or(`registration_deadline.is.null,registration_deadline.gt.${new Date().toISOString()}`) // ✅ valid deadline
+      .gt('start_datetime', new Date().toISOString()) 
+      .or(`registration_deadline.is.null,registration_deadline.gt.${new Date().toISOString()}`)
       .order('start_datetime', { ascending: true });
 
       if (error) {
@@ -141,8 +127,9 @@ const EventDiscovery = () => {
       }
 
       const formattedEvents = data.map((event) => {
-      const dateObj = new Date(event.start_datetime);
-      const endDateObj = event.end_datetime ? new Date(event.end_datetime) : null;
+        const dateObj = new Date(event.start_datetime);
+        const endDateObj = event.end_datetime ? new Date(event.end_datetime) : null;
+        const regCount = event.registrations?.[0]?.count || 0;
 
         return {
           id: event.id,
@@ -171,7 +158,8 @@ const EventDiscovery = () => {
             : ['General'],
           image: event.image_url || 'https://via.placeholder.com/800',
           registration_deadline: event.registration_deadline,
-          capacity: event.capacity
+          capacity: event.capacity,
+          regCount
         };
       });
 
@@ -186,17 +174,15 @@ const EventDiscovery = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        showNotice('Please log in to register.', 'error');
+        showNotification('Please log in to register.', 'error');
         return;
       }
   
-      // 1. Check Deadline
       if (event.registration_deadline && new Date() > new Date(event.registration_deadline)) {
-        showNotice('Registration closed: The deadline has passed.', 'error');
+        showNotification('Registration closed: The deadline has passed.', 'error');
         return;
       }
   
-      // 2. Check Capacity
       if (event.capacity !== null && event.capacity !== undefined) {
         const { count } = await supabase
           .from('registrations')
@@ -204,12 +190,11 @@ const EventDiscovery = () => {
           .eq('event_id', event.id);
   
         if (count >= event.capacity) {
-          showNotice('Event full: No more seats available.', 'error');
+          showNotification('Event full: No more seats available.', 'error');
           return;
         }
       }
   
-      // 3. Insert Registration
       const { error } = await supabase
         .from('registrations')
         .insert([{ 
@@ -220,12 +205,14 @@ const EventDiscovery = () => {
   
       if (error) throw error;
       
-      // Update the local state so the button changes to "Registered" immediately
       setMyRegs(prev => [...prev, event.id]);
       setSelectedEvent(null);
-      showNotice('Successfully registered!', 'success');
+      showNotification('Successfully registered!', 'success');
+      
+      // Update local events list count
+      setEvents(prev => prev.map(e => e.id === event.id ? { ...e, regCount: e.regCount + 1 } : e));
     } catch (err) {
-      showNotice(
+      showNotification(
         err.message?.includes('unique') ? 'You are already registered!' : 'Registration failed.',
         'error'
       );
@@ -233,6 +220,7 @@ const EventDiscovery = () => {
       setIsRegistering(false);
     }
   };
+
 
   // ---------------- FILTER LOGIC ----------------
   // This derived state updates automatically whenever events, searchQuery, 
@@ -473,7 +461,6 @@ const EventDiscovery = () => {
         )}
 
       </main>
-
       {selectedEvent && (
   <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
     <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-slate-950 shadow-2xl">
@@ -519,7 +506,7 @@ const EventDiscovery = () => {
               <h2 className="text-3xl font-black leading-tight sm:text-5xl">{selectedEvent.title || 'Untitled Event'}</h2>
               <p className="mt-2 text-sm text-white/80">
                 <MapPin size={14} className="mr-1 inline text-unity-yellow" />
-                Organized by {selectedEvent.organizer || 'Unity Research Council'}
+                Organized by {selectedEvent.organizer || 'Unity University'}
               </p>
             </div>
 
@@ -568,49 +555,17 @@ const EventDiscovery = () => {
     </div>
   </div>
 )}
-
-      {toast.show && (
-        <div className="fixed bottom-5 right-5 z-120 w-[min(92vw,360px)] rounded-xl border border-white/20 bg-[#0f1f52] p-4 text-white shadow-2xl">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-black uppercase tracking-wider text-[#facc15]">
-                {toast.type === 'success' ? 'Success' : toast.type === 'error' ? 'Error' : 'Confirmation'}
-              </p>
-              <p className="mt-1 text-sm text-white/90">{toast.message}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setToast((prev) => ({ ...prev, show: false }))}
-              className="rounded-md p-1 text-white/70 transition hover:text-white"
-              aria-label="Close toast"
-            >
-              <X size={16} />
-            </button>
-          </div>
-          {toast.mode === 'confirmLogout' && (
-            <div className="mt-3 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setToast((prev) => ({ ...prev, show: false }))}
-                className="rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/10"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmLogout}
-                className="rounded-lg bg-rose-500 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white transition hover:bg-rose-600"
-              >
-                Logout
-              </button>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   </div>
   );
 };
+
+const InfoRow = ({ label, value }) => (
+  <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-2 last:border-none last:pb-0">
+    <p className="text-[10px] font-black uppercase tracking-widest text-unity-yellow">{label}</p>
+    <p className="text-right text-xs font-semibold text-white/90">{value}</p>
+  </div>
+);
 
 const FilterSelect = ({ allLabel, options, value, onChange }) => (
   <div className="relative">
@@ -683,11 +638,5 @@ const EventCard = ({ event, onViewDetails }) => (
   </article>
 );
 
-const InfoRow = ({ label, value }) => (
-  <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-2 last:border-none last:pb-0">
-    <p className="text-[10px] font-black uppercase tracking-widest text-unity-yellow">{label}</p>
-    <p className="text-right text-xs font-semibold text-white/90">{value}</p>
-  </div>
-);
 
 export default EventDiscovery;

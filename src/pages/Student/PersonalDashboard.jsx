@@ -12,21 +12,17 @@ import {
   X
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
+import { useNotification } from '../../context/NotificationContext';
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
+  const { showNotification } = useNotification();
   const [student, setStudent] = useState(null);
   const [activeRegs, setActiveRegs] = useState([]);
   const [pastRegs, setPastRegs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectedReg, setSelectedReg] = useState(null);
   const [isCancelling, setIsCancelling] = useState(false);
-  const [toast, setToast] = useState({
-    show: false,
-    type: 'info',
-    message: '',
-    mode: 'notice'
-  });
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -34,6 +30,7 @@ const StudentDashboard = () => {
       if (!user) return navigate('/');
 
       try {
+        setLoading(true);
         const now = new Date();
 
         const { data: profile } = await supabase
@@ -92,59 +89,61 @@ const StudentDashboard = () => {
     if (hours) return `${hours}h`;
     return `${minutes}m`;
   };
-  const showNotice = (message, type = 'info') => {
-    setToast({ show: true, type, message, mode: 'notice' });
-  };
+
   const handleLogoutRequest = () => {
-    setToast({
-      show: true,
-      type: 'warning',
-      message: 'Are you sure you want to log out?',
-      mode: 'confirmLogout'
-    });
-  };
-  const handleConfirmLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      showNotice(error.message || 'Logout failed. Please try again.', 'error');
-      return;
-    }
-    navigate('/');
-  };
-  const handleCancelRegistration = async (registrationId) => {
-    setIsCancelling(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        showNotice('Session expired. Please login again.', 'error');
-        navigate('/');
-        return;
+    showNotification(
+      'Are you sure you want to log out?',
+      'warning',
+      'confirm',
+      {
+        onConfirm: async () => {
+          const { error } = await supabase.auth.signOut();
+          if (error) {
+            showNotification(error.message || 'Logout failed. Please try again.', 'error');
+            return;
+          }
+          navigate('/');
+        }
       }
-      const { error } = await supabase
-        .from('registrations')
-        .delete()
-        .eq('id', registrationId)
-        .eq('student_id', user.id);
-
-      if (error) throw error;
-
-      setActiveRegs((prev) => prev.filter((reg) => reg.id !== registrationId));
-      if (selectedReg?.id === registrationId) setSelectedReg(null);
-      showNotice('Registration cancelled successfully.', 'success');
-    } catch (err) {
-      showNotice(err.message || 'Could not cancel registration.', 'error');
-    } finally {
-      setIsCancelling(false);
-    }
+    );
   };
 
-  useEffect(() => {
-    if (!toast.show || toast.mode !== 'notice') return undefined;
-    const timer = setTimeout(() => {
-      setToast((prev) => ({ ...prev, show: false }));
-    }, 3200);
-    return () => clearTimeout(timer);
-  }, [toast.show, toast.mode]);
+  const handleCancelRegistration = async (registrationId) => {
+    showNotification(
+      'Are you sure you want to cancel your registration for this event?',
+      'warning',
+      'confirm',
+      {
+        onConfirm: async () => {
+          setIsCancelling(true);
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+              showNotification('Session expired. Please login again.', 'error');
+              navigate('/');
+              return;
+            }
+            const { error } = await supabase
+              .from('registrations')
+              .delete()
+              .eq('id', registrationId)
+              .eq('student_id', user.id);
+
+            if (error) throw error;
+
+            setActiveRegs((prev) => prev.filter((reg) => reg.id !== registrationId));
+            if (selectedReg?.id === registrationId) setSelectedReg(null);
+            showNotification('Registration cancelled successfully.', 'success');
+          } catch (err) {
+            showNotification(err.message || 'Could not cancel registration.', 'error');
+          } finally {
+            setIsCancelling(false);
+          }
+        }
+      }
+    );
+  };
+
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -401,42 +400,6 @@ const StudentDashboard = () => {
               </p>
             </div>
           </div>
-        </div>
-      )}
-
-      {toast.show && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-120 w-[min(92vw,360px)] rounded-xl border border-white/20 bg-[#0f1f52] p-4 text-white">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-black uppercase tracking-wider text-[#facc15]">
-                {toast.type === 'success' ? 'Success' : toast.type === 'error' ? 'Error' : 'Confirmation'}
-              </p>
-              <p className="mt-1 text-sm text-white/90">{toast.message}</p>
-            </div>
-            <button
-              onClick={() => setToast((prev) => ({ ...prev, show: false }))}
-              className="rounded-md p-1 text-white/70 transition hover:text-white"
-              aria-label="Close toast"
-            >
-              <X size={16} />
-            </button>
-          </div>
-          {toast.mode === 'confirmLogout' && (
-            <div className="mt-3 flex justify-end gap-2">
-              <button
-                onClick={() => setToast((prev) => ({ ...prev, show: false }))}
-                className="rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/10"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmLogout}
-                className="rounded-lg bg-rose-500 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white transition hover:bg-rose-600"
-              >
-                Logout
-              </button>
-            </div>
-          )}
         </div>
       )}
     </div>

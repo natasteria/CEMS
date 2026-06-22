@@ -96,8 +96,8 @@ const AdminDashboard = () => {
       case 'organizers':
         return <PendingOrganizers />;
 
-      case 'students':
-        return <ManageStudents />;
+      // case 'students':
+      //   return <ManageStudents />;
 
       default:
         return <AdminProfile adminProfile={adminProfile} />;
@@ -184,7 +184,7 @@ const AdminDashboard = () => {
             Pending Organizers
           </button>
 
-          <button
+          {/* <button
             onClick={() => setCurrentTab('students')}
             className={`flex items-center gap-3 p-3 rounded-lg transition ${
               currentTab === 'students'
@@ -194,7 +194,7 @@ const AdminDashboard = () => {
           >
             <Users size={18} />
             Students
-          </button>
+          </button> */}
 
         </nav>
 

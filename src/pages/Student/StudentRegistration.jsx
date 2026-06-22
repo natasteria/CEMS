@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { IdCard, Mail, Lock, Phone, Search, Filter, Bell } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
-import { useNavigate } from 'react-router-dom';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { useNotification } from '../../context/NotificationContext';
 
 const StudentRegistration = () => {
+  const { showNotification } = useNotification();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -49,17 +50,17 @@ const StudentRegistration = () => {
     ];
 
     if (!validDepartments.includes(formData.department)) {
-      alert('Invalid department selected.');
+      showNotification('Invalid department selected.', 'error');
       return;
     }
 
     if (!batchYears.includes(formData.batchYear)) {
-      alert('Invalid batch year.');
+      showNotification('Invalid batch year.', 'error');
       return;
     }
 
     if (formData.studentId.length !== 8) {
-      alert('Student ID must be exactly 8 characters.');
+      showNotification('Student ID must be exactly 8 characters.', 'error');
       return;
     }
 
@@ -88,7 +89,7 @@ const StudentRegistration = () => {
       if (data.session) {
         navigate('/event-discovery'); // redirect to home page
       } else {
-        alert('Registration successful! Please check your email if a confirmation is required.');
+        showNotification('Registration successful! Please check your email.', 'success');
       }
 
       // reset form
@@ -105,11 +106,11 @@ const StudentRegistration = () => {
 
     } catch (error) {
       if (error.message.includes('already registered')) {
-        alert('This email is already registered.');
+        showNotification('This email is already registered.', 'error');
       } else if (error.message.includes('duplicate key')) {
-        alert('Student ID already exists.');
+        showNotification('Student ID already exists.', 'error');
       } else {
-        alert(`Error: ${error.message}`);
+        showNotification(`Error: ${error.message}`, 'error');
       }
     } finally {
       setLoading(false);

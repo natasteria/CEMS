@@ -10,7 +10,10 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 
+import { useNotification } from '../../../context/NotificationContext';
+
 const AdminEventManagement = () => {
+  const { showNotification } = useNotification();
   const [activeTab, setActiveTab] = useState('ALL');
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -34,7 +37,7 @@ const AdminEventManagement = () => {
   const fetchEvents = async () => {
     const { data, error } = await supabase
       .from('events')
-      .select(`*, organizers (organizer_name)`)
+      .select(`*, organizers (organizer_name, profiles (first_name, last_name))`)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
@@ -70,72 +73,87 @@ const AdminEventManagement = () => {
 
   const handleApprove = async (eventId) => {
     setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ status: 'approved' })
+        .eq('id', eventId);
 
-    const { error } = await supabase
-      .from('events')
-      .update({ status: 'approved' })
-      .eq('id', eventId);
+      if (error) throw error;
 
-    if (error) console.error(error);
-
-    await fetchEvents();
-    closeModal();
-    setLoading(false);
+      await fetchEvents();
+      closeModal();
+      showNotification('Event approved successfully', 'success');
+    } catch (error) {
+      console.error(error);
+      showNotification('Failed to approve event', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleReject = async (eventId) => {
     if (!rejectionNote.trim()) return;
 
     setLoading(true);
-
-    const { error } = await supabase
-      .from('events')
-      .update({
-        status: 'rejected',
-        rejection_note: rejectionNote
-      })
-      .eq('id', eventId);
-
-    if (error) console.error(error);
-
-    await fetchEvents();
-    closeModal();
-    setLoading(false);
-  };
-
-  const handleDeleteEvent = async (eventId) => {
-    const confirmed = window.confirm(
-      'Are you sure you want to remove this event?'
-    );
-  
-    if (!confirmed) return;
-  
-    setLoading(true);
-  
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-  
       const { error } = await supabase
         .from('events')
         .update({
-          deleted_at: new Date().toISOString(),
-          deleted_by: user.id,
-          deletion_note: 'Removed by administrator'
+          status: 'rejected',
+          rejection_note: rejectionNote
         })
         .eq('id', eventId);
-  
+
       if (error) throw error;
-  
+
       await fetchEvents();
-  
-      if (selectedEvent?.id === eventId) {
-        closeModal();
-      }
-    } catch (err) {
-      console.error(err);
+      closeModal();
+      showNotification('Event rejected', 'info');
+    } catch (error) {
+      console.error(error);
+      showNotification('Failed to reject event', 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteEvent = async (eventId) => {
+    showNotification(
+      'Are you sure you want to remove this event? This action cannot be undone.',
+      'warning',
+      'confirm',
+      {
+        onConfirm: async () => {
+          setLoading(true);
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+
+            const { error } = await supabase
+              .from('events')
+              .update({
+                deleted_at: new Date().toISOString(),
+                deleted_by: user.id,
+                deletion_note: 'Removed by administrator'
+              })
+              .eq('id', eventId);
+
+            if (error) throw error;
+
+            await fetchEvents();
+            showNotification('Event removed successfully', 'success');
+            if (selectedEvent?.id === eventId) {
+              closeModal();
+            }
+          } catch (err) {
+            console.error(err);
+            showNotification('Failed to remove event', 'error');
+          } finally {
+            setLoading(false);
+          }
+        }
+      }
+    );
   };
 
   const filteredEvents = activeTab === 'ALL' 
@@ -160,10 +178,10 @@ const AdminEventManagement = () => {
           <h1 className="text-2xl font-bold text-[#0f172a]">Event Approvals</h1>
           <p className="text-gray-500 text-sm">Review and moderate incoming event submissions.</p>
         </div>
-        <div className="relative w-64">
+        {/* <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input type="text" placeholder="Search events..." className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#facc15]" />
-        </div>
+        </div> */}
       </div>
 
       <div className="flex gap-6 border-b border-gray-200 mb-6">
@@ -203,7 +221,10 @@ const AdminEventManagement = () => {
                   <div className="font-semibold text-[#0f172a] group-hover:text-[#1d3a8a]">{event.title}</div>
                   <div className="text-[10px] text-gray-400 font-mono">#{event.id}</div>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-600">{event.organizers?.organizer_name}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">
+                  <div className="font-medium">{event.organizers?.organizer_name}</div>
+                  <div className="text-[10px] text-slate-400 capitalize">Contact: {event.organizers?.profiles?.first_name} {event.organizers?.profiles?.last_name}</div>
+                </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center text-sm text-gray-600 gap-2">
                     <Calendar className="w-3.5 h-3.5 text-[#1d3a8a]" />
@@ -372,9 +393,15 @@ const AdminEventManagement = () => {
                           : 'N/A'}
                       </p>
                     </div>
-                    <div className="sm:col-span-2">
+                    <div className="sm:col-span-1">
                       <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-0.5">Organizer</p>
                       <p className="text-sm font-medium text-gray-800">{selectedEvent.organizers?.organizer_name || 'N/A'}</p>
+                    </div>
+                    <div className="sm:col-span-1">
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-0.5">Primary Contact</p>
+                      <p className="text-sm font-medium text-gray-800">
+                        {selectedEvent.organizers?.profiles?.first_name} {selectedEvent.organizers?.profiles?.last_name}
+                      </p>
                     </div>
                   </div>
                 </div>

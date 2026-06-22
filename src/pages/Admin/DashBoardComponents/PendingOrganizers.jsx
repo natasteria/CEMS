@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import { Check, X, RefreshCw } from "lucide-react";
+import { useNotification } from "../../../context/NotificationContext";
 
 const PendingOrganizers = () => {
+  const { showNotification } = useNotification();
   const [organizers, setOrganizers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false); // For the refresh button spin
@@ -22,7 +24,9 @@ const PendingOrganizers = () => {
           registration_status,
           profiles!inner(
             email,
-            created_at
+            created_at,
+            first_name,
+            last_name
           )
         `)
         .eq("registration_status", "pending")
@@ -34,6 +38,7 @@ const PendingOrganizers = () => {
         id: o.id,
         organizer_name: o.organizer_name,
         organizer_type: o.organizer_type,
+        primary_contact: `${o.profiles?.first_name || ''} ${o.profiles?.last_name || ''}`.trim() || "N/A",
         email: o.profiles?.email || "N/A",
         applied_at: o.profiles?.created_at || new Date().toISOString(),
       }));
@@ -74,9 +79,10 @@ const PendingOrganizers = () => {
 
       if (error) throw error;
       setOrganizers((prev) => prev.filter((o) => o.id !== id));
+      showNotification(`Organizer successfully ${status}`, 'success');
     } catch (err) {
       console.error(`Failed to ${status} organizer:`, err.message);
-      alert(`Failed to ${status} organizer`);
+      showNotification(`Failed to ${status} organizer`, 'error');
     } finally {
       setActionLoading(null);
     }
@@ -107,6 +113,7 @@ const PendingOrganizers = () => {
           <thead>
             <tr className="bg-slate-50 text-left text-sm font-semibold text-slate-600">
               <th className="px-6 py-3 border-b">Organizer Name</th>
+              <th className="px-6 py-3 border-b">Primary Contact</th>
               <th className="px-6 py-3 border-b">Organizer Type</th>
               <th className="px-6 py-3 border-b">Email</th>
               <th className="px-6 py-3 border-b">Applied At</th>
@@ -117,7 +124,7 @@ const PendingOrganizers = () => {
           <tbody>
             {organizers.length === 0 ? (
               <tr>
-                <td colSpan="5" className="text-center py-6 text-slate-500">
+                <td colSpan="6" className="text-center py-6 text-slate-500">
                   No pending organizers
                 </td>
               </tr>
@@ -125,6 +132,7 @@ const PendingOrganizers = () => {
               organizers.map((org) => (
                 <tr key={org.id} className="hover:bg-slate-50 border-b">
                   <td className="px-6 py-4 text-slate-700 font-medium">{org.organizer_name}</td>
+                  <td className="px-6 py-4 text-slate-700">{org.primary_contact}</td>
                   <td className="px-6 py-4 text-slate-700">{org.organizer_type}</td>
                   <td className="px-6 py-4 text-slate-700">{org.email}</td>
                   <td className="px-6 py-4 text-slate-500">
