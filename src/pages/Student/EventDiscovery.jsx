@@ -109,16 +109,16 @@ const EventDiscovery = () => {
 
       // 2. Fetch events with registration counts
       const { data, error } = await supabase
-      .from('events')
-      .select(`
+        .from('events')
+        .select(`
         *,
         registrations(count)
       `)
-      .eq('status', 'approved')
-      .is('deleted_at', null)
-      .gt('start_datetime', new Date().toISOString()) 
-      .or(`registration_deadline.is.null,registration_deadline.gt.${new Date().toISOString()}`)
-      .order('start_datetime', { ascending: true });
+        .eq('status', 'approved')
+        .is('deleted_at', null)
+        .gt('start_datetime', new Date().toISOString())
+        .or(`registration_deadline.is.null,registration_deadline.gt.${new Date().toISOString()}`)
+        .order('start_datetime', { ascending: true });
 
       if (error) {
         console.error(error.message);
@@ -134,7 +134,7 @@ const EventDiscovery = () => {
         return {
           id: event.id,
           title: event.title,
-          rawDate: dateObj, 
+          rawDate: dateObj,
           start_datetime: event.start_datetime,
           end_datetime: event.end_datetime,
           date: dateObj.toLocaleDateString('en-US', {
@@ -153,8 +153,8 @@ const EventDiscovery = () => {
             : null,
           location: event.venue,
           description: event.description || '',
-          categories: event.categories && event.categories.length > 0 
-            ? event.categories 
+          categories: event.categories && event.categories.length > 0
+            ? event.categories
             : ['General'],
           image: event.image_url || 'https://via.placeholder.com/800',
           registration_deadline: event.registration_deadline,
@@ -177,38 +177,38 @@ const EventDiscovery = () => {
         showNotification('Please log in to register.', 'error');
         return;
       }
-  
+
       if (event.registration_deadline && new Date() > new Date(event.registration_deadline)) {
         showNotification('Registration closed: The deadline has passed.', 'error');
         return;
       }
-  
+
       if (event.capacity !== null && event.capacity !== undefined) {
         const { count } = await supabase
           .from('registrations')
           .select('*', { count: 'exact', head: true })
           .eq('event_id', event.id);
-  
+
         if (count >= event.capacity) {
           showNotification('Event full: No more seats available.', 'error');
           return;
         }
       }
-  
+
       const { error } = await supabase
         .from('registrations')
-        .insert([{ 
-          event_id: event.id, 
-          student_id: user.id, 
-          registration_status: 'registered' 
+        .insert([{
+          event_id: event.id,
+          student_id: user.id,
+          registration_status: 'registered'
         }]);
-  
+
       if (error) throw error;
-      
+
       setMyRegs(prev => [...prev, event.id]);
       setSelectedEvent(null);
       showNotification('Successfully registered!', 'success');
-      
+
       // Update local events list count
       setEvents(prev => prev.map(e => e.id === event.id ? { ...e, regCount: e.regCount + 1 } : e));
     } catch (err) {
@@ -228,8 +228,8 @@ const EventDiscovery = () => {
   const filteredEvents = events.filter((event) => {
     // Feature 1 & 2: Search by Title/Description + .trim() for robustness
     const normalizedQuery = searchQuery.toLowerCase().trim();
-    const matchesSearch = 
-      event.title.toLowerCase().includes(normalizedQuery) || 
+    const matchesSearch =
+      event.title.toLowerCase().includes(normalizedQuery) ||
       event.description.toLowerCase().includes(normalizedQuery);
 
     // Feature 3: Category Filter
@@ -240,7 +240,7 @@ const EventDiscovery = () => {
     if (dateFilter !== 'all') {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       const eventDate = new Date(event.rawDate);
       eventDate.setHours(0, 0, 0, 0);
 
@@ -251,8 +251,8 @@ const EventDiscovery = () => {
         nextWeek.setDate(today.getDate() + 7);
         matchesDate = eventDate >= today && eventDate <= nextWeek;
       } else if (dateFilter === 'This Month') {
-        matchesDate = eventDate.getMonth() === today.getMonth() && 
-                      eventDate.getFullYear() === today.getFullYear();
+        matchesDate = eventDate.getMonth() === today.getMonth() &&
+          eventDate.getFullYear() === today.getFullYear();
       }
     }
 
@@ -343,10 +343,10 @@ const EventDiscovery = () => {
   }
 
   return (
-  <div className="relative min-h-screen overflow-hidden bg-white font-sans text-slate-900">
-    
-    {/* FULL PAGE GRID */}
-    {/* <div
+    <div className="relative min-h-screen overflow-hidden bg-white font-sans text-slate-900">
+
+      {/* FULL PAGE GRID */}
+      {/* <div
       className="pointer-events-none absolute inset-0"
       style={{
         backgroundImage:
@@ -355,16 +355,16 @@ const EventDiscovery = () => {
       }}
     /> */}
 
-    <div className="relative z-10">
-      <header className="bg-[#233f9c] border-b border-white/10 px-4 pb-8 pt-6 sm:px-8 lg:px-12">
-      <div
-    className="pointer-events-none absolute inset-0 opacity-[0.15]"
-    style={{
-      backgroundImage:
-        'linear-gradient(to right, rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.15) 1px, transparent 1px)',
-      backgroundSize: '36px 36px'
-    }}
-  />
+      <div className="relative z-10">
+        <header className="bg-[#233f9c] border-b border-white/10 px-4 pb-8 pt-6 sm:px-8 lg:px-12">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.15]"
+            style={{
+              backgroundImage:
+                'linear-gradient(to right, rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.15) 1px, transparent 1px)',
+              backgroundSize: '36px 36px'
+            }}
+          />
           <div className="mx-auto max-w-7xl">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-start gap-3 sm:gap-4">
@@ -464,256 +464,253 @@ const EventDiscovery = () => {
         </header>
 
         <main className="relative mx-auto max-w-7xl px-4 pb-12 pt-6 sm:px-8 lg:px-12">
-        
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-600">
-              Curated events
-            </p>
-            <h2 className="text-2xl font-bold text-slate-900">
-              Featured picks for you
-            </h2>
-          </div>
-          <p className="text-sm text-slate-500">
-            {loadingEvents ? 'Loading events...' : `${filteredEvents.length} events found`}
-          </p>
-        </div>
 
-        {loadingEvents ? (
-          <div className="flex flex-col items-center py-20">
-            <Loader2 className="mb-4 h-10 w-10 animate-spin text-unity-yellow" />
-            <p className="animate-pulse text-slate-500">Loading events...</p>
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-600">
+                Curated events
+              </p>
+              <h2 className="text-2xl font-bold text-slate-900">
+                Featured picks for you
+              </h2>
+            </div>
+            <p className="text-sm text-slate-500">
+              {loadingEvents ? 'Loading events...' : `${filteredEvents.length} events found`}
+            </p>
           </div>
-        ) : filteredEvents.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {filteredEvents.map((event) => (
-              <EventCard key={event.id} event={event} onViewDetails={() => setSelectedEvent(event)} />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-20 text-center">
-            <p className="text-lg text-slate-600">No matching events found.</p>
-            <button
-              type="button"
-              onClick={() => { setSearchQuery(''); setCategoryFilter('all'); setDateFilter('all'); }}
-              className="mt-4 text-sm font-semibold text-unity-yellow hover:underline"
-            >
-              Clear all filters
-            </button>
+
+          {loadingEvents ? (
+            <div className="flex flex-col items-center py-20">
+              <Loader2 className="mb-4 h-10 w-10 animate-spin text-unity-yellow" />
+              <p className="animate-pulse text-slate-500">Loading events...</p>
+            </div>
+          ) : filteredEvents.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {filteredEvents.map((event) => (
+                <EventCard key={event.id} event={event} onViewDetails={() => setSelectedEvent(event)} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-20 text-center">
+              <p className="text-lg text-slate-600">No matching events found.</p>
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(''); setCategoryFilter('all'); setDateFilter('all'); }}
+                className="mt-4 text-sm font-semibold text-unity-yellow hover:underline"
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
+
+        </main>
+        {selectedEvent && (
+          <div className="fixed inset-0 z-50 flex flex-col lg:flex-row bg-[#060b13] overflow-hidden">
+
+            {/* Background Image with Gradient Overlay */}
+            <div className="absolute inset-0 z-0 pointer-events-none">
+              <img
+                src={selectedEvent.image}
+                alt=""
+                className="h-full w-full object-cover filter blur-xs scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#060b13]/95 via-[#060b13]/60 to-[#060b13]/40 lg:bg-gradient-to-r lg:from-[#060b13]/85 lg:via-[#060b13]/55 lg:to-[#060b13]/65 backdrop-blur-[2px]" />
+            </div>
+
+            {/* Absolute Position Controls Header */}
+            <div className="absolute top-6 left-6 right-6 z-20 flex items-center justify-between pointer-events-none">
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="pointer-events-auto flex items-center gap-2 rounded-full bg-black/45 border border-white/10 px-4 py-2 text-xs font-semibold text-white tracking-wide transition hover:bg-black/60 hover:border-white/20 active:scale-[0.97]"
+              >
+                <ArrowLeft size={14} className="text-white" /> Back to events
+              </button>
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="pointer-events-auto rounded-full bg-black/45 border border-white/10 p-2 text-white transition hover:bg-black/60 hover:border-white/20 active:scale-[0.97]"
+                aria-label="Close modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Left Content Column */}
+            <div className="relative z-10 flex-1 flex flex-col justify-start gap-8 text-white p-6 sm:p-8 lg:p-16 pt-24 lg:pt-28 max-w-4xl">
+              <div>
+                {/* Badges */}
+                <div className="flex flex-wrap gap-2 items-center mb-5">
+                  {(selectedEvent.categories?.length ? selectedEvent.categories : ['General']).slice(0, 3).map((cat, i) => (
+                    <span
+                      key={i}
+                      className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-200 backdrop-blur-sm"
+                    >
+                      {cat}
+                    </span>
+                  ))}
+                  <span className="rounded-full bg-unity-yellow px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-unity-navy flex items-center gap-1.5 shadow-md">
+                    <Trophy size={11} className="fill-unity-navy stroke-unity-navy" /> Featured
+                  </span>
+                </div>
+
+                {/* Event Title */}
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] text-white">
+                  {selectedEvent.title || 'Untitled Event'}
+                </h2>
+
+                {/* Organized By */}
+                <p className="flex items-center gap-2 text-xs sm:text-sm text-slate-300 font-medium mt-4 mb-6">
+                  <MapPin size={16} className="text-emerald-400 shrink-0" />
+                  <span>Organized by <strong className="text-white">{selectedEvent.organizer || 'Unity University'}</strong></span>
+                </p>
+
+                {/* Event Description (Directly under the title) */}
+                <p className="text-base text-slate-200 leading-relaxed whitespace-pre-line max-w-3xl">
+                  {selectedEvent.description || 'No description provided for this event.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Right Sidebar Column */}
+            <div className="relative z-10 w-full lg:w-[420px] p-6 sm:p-8 lg:p-12 lg:pl-0 shrink-0 flex flex-col justify-center">
+              <div className="w-full rounded-3xl border border-white/10 bg-[#070e1e]/90 backdrop-blur-md p-6 sm:p-8 flex flex-col gap-6 shadow-2xl relative overflow-hidden">
+                <div className="flex flex-col gap-5">
+                  {/* STARTS */}
+                  <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                      <CalendarDays size={18} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Starts</p>
+                      <p className="text-sm font-semibold text-white">{formatEventDateLong(selectedEvent.start_datetime)}</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">{formatEventTime(selectedEvent.start_datetime)}</p>
+                    </div>
+                  </div>
+
+                  {/* ENDS */}
+                  <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                      <CalendarDays size={18} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Ends</p>
+                      <p className="text-sm font-semibold text-white">{formatEventDateLong(selectedEvent.end_datetime)}</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">{formatEventTime(selectedEvent.end_datetime)}</p>
+                    </div>
+                  </div>
+
+                  {/* DURATION */}
+                  {(() => {
+                    const dur = getDurationDetails(selectedEvent.start_datetime, selectedEvent.end_datetime);
+                    return (
+                      <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
+                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                          <Clock size={18} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Duration</p>
+                          <p className="text-sm font-semibold text-white">{dur.primary}</p>
+                          {dur.secondary && <p className="text-[11px] text-slate-400 mt-0.5">{dur.secondary}</p>}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* VENUE */}
+                  {(() => {
+                    const venueInfo = getVenueDetails(selectedEvent.venue || selectedEvent.location);
+                    return (
+                      <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
+                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                          <MapPin size={18} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Venue</p>
+                          <p className="text-sm font-semibold text-white break-words">{venueInfo.primary}</p>
+                          {venueInfo.secondary && <p className="text-[11px] text-slate-400 mt-0.5 break-words">{venueInfo.secondary}</p>}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* CAPACITY */}
+                  <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                      <Users size={18} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Capacity</p>
+                      {selectedEvent.capacity != null && selectedEvent.capacity !== '' ? (
+                        <>
+                          <p className="text-sm font-semibold text-white">
+                            {Math.max(0, selectedEvent.capacity - (selectedEvent.regCount || 0))} spots left
+                          </p>
+                          <div className="mt-2 flex items-center justify-between gap-4">
+                            <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden">
+                              <div
+                                className="h-full bg-unity-yellow rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${Math.min(100, Math.max(0, ((selectedEvent.regCount || 0) / selectedEvent.capacity) * 100))}%`
+                                }}
+                              />
+                            </div>
+                            <span className="text-[11px] font-bold text-slate-400 shrink-0">
+                              {selectedEvent.regCount || 0}/{selectedEvent.capacity}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm font-semibold text-white">Unlimited spots available</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">{selectedEvent.regCount || 0} registered</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* REGISTRATION DEADLINE */}
+                  <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                      <CalendarDays size={18} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Registration Deadline</p>
+                      <p className="text-sm font-semibold text-white">
+                        {formatEventDateLong(selectedEvent.registration_deadline)}
+                      </p>
+                      {selectedEvent.registration_deadline && (
+                        <p className="text-[11px] text-slate-400 mt-0.5">{formatEventTime(selectedEvent.registration_deadline)}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {myRegs.includes(selectedEvent.id) ? (
+                  <div className="mt-4">
+                    <div className="w-full rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-3.5 text-center text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
+                      Registered
+                    </div>
+                    <p className="text-center text-[10px] text-slate-500 mt-2">
+                      You are signed up for this event
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <button
+                      disabled={isRegistering}
+                      onClick={() => handleRegister(selectedEvent)}
+                      className="w-full rounded-xl bg-unity-yellow hover:bg-[#eab308] text-unity-navy py-3.5 text-xs font-black uppercase tracking-[0.2em] transition duration-200 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-unity-yellow/10 cursor-pointer"
+                    >
+                      {isRegistering ? 'Verifying...' : 'Register for this event'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
         )}
-
-      </main>
-      {selectedEvent && (
-        <div className="fixed inset-0 z-50 flex flex-col lg:flex-row bg-[#060b13] overflow-hidden">
-          
-          {/* Background Image with Gradient Overlay */}
-          <div className="absolute inset-0 z-0 pointer-events-none">
-            <img
-              src={selectedEvent.image}
-              alt=""
-              className="h-full w-full object-cover filter blur-xs scale-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#060b13]/95 via-[#060b13]/60 to-[#060b13]/40 lg:bg-gradient-to-r lg:from-[#060b13]/85 lg:via-[#060b13]/55 lg:to-[#060b13]/65 backdrop-blur-[2px]" />
-          </div>
-
-          {/* Absolute Position Controls Header */}
-          <div className="absolute top-6 left-6 right-6 z-20 flex items-center justify-between pointer-events-none">
-            <button
-              onClick={() => setSelectedEvent(null)}
-              className="pointer-events-auto flex items-center gap-2 rounded-full bg-black/45 border border-white/10 px-4 py-2 text-xs font-semibold text-white tracking-wide transition hover:bg-black/60 hover:border-white/20 active:scale-[0.97]"
-            >
-              <ArrowLeft size={14} className="text-white" /> Back to events
-            </button>
-            <button
-              onClick={() => setSelectedEvent(null)}
-              className="pointer-events-auto rounded-full bg-black/45 border border-white/10 p-2 text-white transition hover:bg-black/60 hover:border-white/20 active:scale-[0.97]"
-              aria-label="Close modal"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          {/* Left Content Column */}
-          <div className="relative z-10 flex-1 flex flex-col justify-start gap-8 text-white p-6 sm:p-8 lg:p-16 pt-24 lg:pt-28 max-w-4xl">
-            <div>
-              {/* Badges */}
-              <div className="flex flex-wrap gap-2 items-center mb-5">
-                {(selectedEvent.categories?.length ? selectedEvent.categories : ['General']).slice(0, 3).map((cat, i) => (
-                  <span
-                    key={i}
-                    className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-200 backdrop-blur-sm"
-                  >
-                    {cat}
-                  </span>
-                ))}
-                <span className="rounded-full bg-unity-yellow px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-unity-navy flex items-center gap-1.5 shadow-md">
-                  <Trophy size={11} className="fill-unity-navy stroke-unity-navy" /> Featured
-                </span>
-              </div>
-
-              {/* Event Title */}
-              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] text-white">
-                {selectedEvent.title || 'Untitled Event'}
-              </h2>
-
-              {/* Organized By */}
-              <p className="flex items-center gap-2 text-xs sm:text-sm text-slate-300 font-medium mt-4 mb-6">
-                <MapPin size={16} className="text-emerald-400 shrink-0" />
-                <span>Organized by <strong className="text-white">{selectedEvent.organizer || 'Unity University'}</strong></span>
-              </p>
-
-              {/* Event Description (Directly under the title) */}
-              <p className="text-base text-slate-200 leading-relaxed whitespace-pre-line max-w-3xl">
-                {selectedEvent.description || 'No description provided for this event.'}
-              </p>
-            </div>
-          </div>
-
-          {/* Right Sidebar Column */}
-          <div className="relative z-10 w-full lg:w-[420px] p-6 sm:p-8 lg:p-12 lg:pl-0 shrink-0 flex flex-col justify-center">
-            <div className="w-full rounded-3xl border border-white/10 bg-[#070e1e]/90 backdrop-blur-md p-6 sm:p-8 flex flex-col gap-6 shadow-2xl relative overflow-hidden">
-              <div className="flex flex-col gap-5">
-                {/* STARTS */}
-                <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
-                    <CalendarDays size={18} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Starts</p>
-                    <p className="text-sm font-semibold text-white">{formatEventDateLong(selectedEvent.start_datetime)}</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{formatEventTime(selectedEvent.start_datetime)}</p>
-                  </div>
-                </div>
-
-                {/* ENDS */}
-                <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
-                    <CalendarDays size={18} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Ends</p>
-                    <p className="text-sm font-semibold text-white">{formatEventDateLong(selectedEvent.end_datetime)}</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{formatEventTime(selectedEvent.end_datetime)}</p>
-                  </div>
-                </div>
-
-                {/* DURATION */}
-                {(() => {
-                  const dur = getDurationDetails(selectedEvent.start_datetime, selectedEvent.end_datetime);
-                  return (
-                    <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
-                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
-                        <Clock size={18} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Duration</p>
-                        <p className="text-sm font-semibold text-white">{dur.primary}</p>
-                        {dur.secondary && <p className="text-[11px] text-slate-400 mt-0.5">{dur.secondary}</p>}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* VENUE */}
-                {(() => {
-                  const venueInfo = getVenueDetails(selectedEvent.venue || selectedEvent.location);
-                  return (
-                    <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
-                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
-                        <MapPin size={18} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Venue</p>
-                        <p className="text-sm font-semibold text-white break-words">{venueInfo.primary}</p>
-                        {venueInfo.secondary && <p className="text-[11px] text-slate-400 mt-0.5 break-words">{venueInfo.secondary}</p>}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* CAPACITY */}
-                <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
-                    <Users size={18} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Capacity</p>
-                    {selectedEvent.capacity != null && selectedEvent.capacity !== '' ? (
-                      <>
-                        <p className="text-sm font-semibold text-white">
-                          {Math.max(0, selectedEvent.capacity - (selectedEvent.regCount || 0))} spots left
-                        </p>
-                        <div className="mt-2 flex items-center justify-between gap-4">
-                          <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden">
-                            <div
-                              className="h-full bg-unity-yellow rounded-full transition-all duration-500"
-                              style={{
-                                width: `${Math.min(100, Math.max(0, ((selectedEvent.regCount || 0) / selectedEvent.capacity) * 100))}%`
-                              }}
-                            />
-                          </div>
-                          <span className="text-[11px] font-bold text-slate-400 shrink-0">
-                            {selectedEvent.regCount || 0}/{selectedEvent.capacity}
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-sm font-semibold text-white">Unlimited spots available</p>
-                        <p className="text-[11px] text-slate-400 mt-0.5">{selectedEvent.regCount || 0} registered</p>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* REGISTRATION DEADLINE */}
-                <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
-                    <CalendarDays size={18} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Registration Deadline</p>
-                    <p className="text-sm font-semibold text-white">
-                      {formatEventDateLong(selectedEvent.registration_deadline)}
-                    </p>
-                    {selectedEvent.registration_deadline && (
-                      <p className="text-[11px] text-slate-400 mt-0.5">{formatEventTime(selectedEvent.registration_deadline)}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {myRegs.includes(selectedEvent.id) ? (
-                <div className="mt-4">
-                  <div className="w-full rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-3.5 text-center text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
-                    Registered
-                  </div>
-                  <p className="text-center text-[10px] text-slate-500 mt-2">
-                    You are signed up for this event
-                  </p>
-                </div>
-              ) : (
-                <div className="mt-4">
-                  <button
-                    disabled={isRegistering}
-                    onClick={() => handleRegister(selectedEvent)}
-                    className="w-full rounded-xl bg-unity-yellow hover:bg-[#eab308] text-unity-navy py-3.5 text-xs font-black uppercase tracking-[0.2em] transition duration-200 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-unity-yellow/10 cursor-pointer"
-                  >
-                    {isRegistering ? 'Verifying...' : 'Register for this event'}
-                  </button>
-                  <p className="text-center text-[10px] text-slate-500 mt-2">
-                    Free for Unity University students
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-        </div>
-      )}
+      </div>
     </div>
-  </div>
   );
 };
 

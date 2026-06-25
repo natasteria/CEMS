@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
-  LogOut, 
-  CalendarDays, 
-  MapPin, 
+import {
+  LogOut,
+  CalendarDays,
+  MapPin,
   ArrowLeft,
   Loader2,
   Clock,
@@ -76,8 +76,8 @@ const StudentDashboard = () => {
     fetchDashboardData();
   }, [navigate]);
 
-  const formatDate = (ds) => new Date(ds).toLocaleDateString('en-US', { 
-    month: 'short', day: 'numeric', year: 'numeric' 
+  const formatDate = (ds) => new Date(ds).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
   });
   const formatTime = (ds) =>
     new Date(ds).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -223,7 +223,7 @@ const StudentDashboard = () => {
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-900">
-     <nav className="relative sticky top-0 z-50 border-b border-white/10 bg-[#0f1f52]/95 px-8 py-5 text-white backdrop-blur lg:px-12">
+      <nav className="relative sticky top-0 z-50 border-b border-white/10 bg-[#0f1f52]/95 px-8 py-5 text-white backdrop-blur lg:px-12">
 
         {/* GRID OVERLAY */}
         <div
@@ -271,67 +271,67 @@ const StudentDashboard = () => {
             {activeRegs.length > 0 ? (
               <div className="flex w-max gap-5">
                 {activeRegs.map((reg) => (
-              <div
-                key={reg.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => setSelectedReg(reg)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setSelectedReg(reg);
-                  }
-                }}
-                className="group relative min-h-[320px] min-w-[320px] cursor-pointer overflow-hidden rounded-2xl border border-slate-200 shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-unity-yellow/70"
-              >
-                <img
-                  src={reg.events.image_url || 'https://via.placeholder.com/800'}
-                  alt={reg.events.title}
-                  className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-linear-to-t from-black via-black/55 to-black/20" />
-                <div className="absolute right-3 top-3 translate-y-1 rounded-full bg-black/45 px-3 py-1 text-[10px] font-semibold text-white/90 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:opacity-100">
-                  Click to view details
-                </div>
-                <div className="relative flex h-full flex-col justify-between p-5 text-white">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="rounded-md bg-unity-yellow px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-unity-navy">
-                      {reg.events.categories?.[0] || 'Event'}
-                    </span>
-                    <span className="rounded-full border border-emerald-300/35 bg-emerald-500/20 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-emerald-100">
-                      Active
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="mb-2 line-clamp-2 text-2xl font-black leading-tight">{reg.events.title}</h3>
-                    <div className="space-y-1.5 text-xs text-white/90">
-                      <p className="flex items-center gap-1.5">
-                        <MapPin size={13} className="text-unity-yellow" />
-                        {reg.events.venue}
-                      </p>
-                      <p className="flex items-center gap-1.5">
-                        <Clock size={13} className="text-unity-yellow" />
-                        {formatDate(reg.events.start_datetime)} {formatTime(reg.events.start_datetime)}
-                      </p>
+                  <div
+                    key={reg.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedReg(reg)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedReg(reg);
+                      }
+                    }}
+                    className="group relative min-h-[320px] min-w-[320px] cursor-pointer overflow-hidden rounded-2xl border border-slate-200 shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-unity-yellow/70"
+                  >
+                    <img
+                      src={reg.events.image_url || 'https://via.placeholder.com/800'}
+                      alt={reg.events.title}
+                      className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-linear-to-t from-black via-black/55 to-black/20" />
+                    <div className="absolute right-3 top-3 translate-y-1 rounded-full bg-black/45 px-3 py-1 text-[10px] font-semibold text-white/90 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:opacity-100">
+                      Click to view details
                     </div>
+                    <div className="relative flex h-full flex-col justify-between p-5 text-white">
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="rounded-md bg-unity-yellow px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-unity-navy">
+                          {reg.events.categories?.[0] || 'Event'}
+                        </span>
+                        <span className="rounded-full border border-emerald-300/35 bg-emerald-500/20 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-emerald-100">
+                          Active
+                        </span>
+                      </div>
 
-                    <div className="mt-5 flex items-center justify-between border-t border-white/20 pt-4">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCancelRegistration(reg.id);
-                        }}
-                        disabled={isCancelling}
-                        className="text-[10px] font-black uppercase tracking-wider text-rose-200 transition hover:text-red-300 disabled:opacity-60"
-                      >
-                        {isCancelling ? 'Cancelling...' : 'Cancel Registration'}
-                      </button>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-white/75">Tap card for details</span>
+                      <div>
+                        <h3 className="mb-2 line-clamp-2 text-2xl font-black leading-tight">{reg.events.title}</h3>
+                        <div className="space-y-1.5 text-xs text-white/90">
+                          <p className="flex items-center gap-1.5">
+                            <MapPin size={13} className="text-unity-yellow" />
+                            {reg.events.venue}
+                          </p>
+                          <p className="flex items-center gap-1.5">
+                            <Clock size={13} className="text-unity-yellow" />
+                            {formatDate(reg.events.start_datetime)} {formatTime(reg.events.start_datetime)}
+                          </p>
+                        </div>
+
+                        <div className="mt-5 flex items-center justify-between border-t border-white/20 pt-4">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelRegistration(reg.id);
+                            }}
+                            disabled={isCancelling}
+                            className="text-[10px] font-black uppercase tracking-wider text-rose-200 transition hover:text-red-300 disabled:opacity-60"
+                          >
+                            {isCancelling ? 'Cancelling...' : 'Cancel Registration'}
+                          </button>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-white/75">Tap card for details</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
                 ))}
               </div>
             ) : (
@@ -387,7 +387,7 @@ const StudentDashboard = () => {
 
       {selectedReg && (
         <div className="fixed inset-0 z-50 flex flex-col lg:flex-row bg-[#060b13] overflow-hidden">
-          
+
           {/* Background Image with Gradient Overlay */}
           <div className="absolute inset-0 z-0 pointer-events-none">
             <img
@@ -579,9 +579,6 @@ const StudentDashboard = () => {
                 >
                   {isCancelling ? 'Cancelling...' : 'Cancel Registration'}
                 </button>
-                <p className="text-center text-[10px] text-slate-500 mt-2">
-                  Free for Unity University students
-                </p>
               </div>
             </div>
           </div>
