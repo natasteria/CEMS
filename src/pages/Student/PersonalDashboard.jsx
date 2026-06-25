@@ -9,7 +9,9 @@ import {
   Clock,
   CheckCircle2,
   History,
-  X
+  X,
+  Trophy,
+  Users
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { useNotification } from '../../context/NotificationContext';
@@ -44,7 +46,8 @@ const StudentDashboard = () => {
           .select(`
             id,
             events (
-              id, title, venue, start_datetime, end_datetime, categories, image_url
+              id, title, venue, start_datetime, end_datetime, categories, image_url, description, capacity, registration_deadline,
+              registrations(count)
             )
           `)
           .eq('student_id', user.id);
@@ -88,6 +91,68 @@ const StudentDashboard = () => {
     if (hours && minutes) return `${hours}h ${minutes}m`;
     if (hours) return `${hours}h`;
     return `${minutes}m`;
+  };
+
+  const formatEventDateLong = (dateTimeStr) => {
+    if (!dateTimeStr) return 'Date TBD';
+    const dateObj = new Date(dateTimeStr);
+    if (Number.isNaN(dateObj.getTime())) return 'Date TBD';
+    return dateObj.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const formatEventTime = (dateTimeStr) => {
+    if (!dateTimeStr) return 'Time TBD';
+    const dateObj = new Date(dateTimeStr);
+    if (Number.isNaN(dateObj.getTime())) return 'Time TBD';
+    return dateObj.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
+
+  const getDurationDetails = (startStr, endStr) => {
+    if (!startStr || !endStr) return { primary: 'Duration TBD', secondary: '' };
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    const diffMs = end - start;
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || diffMs <= 0) {
+      return { primary: 'Duration TBD', secondary: '' };
+    }
+
+    const totalMinutes = Math.floor(diffMs / 60000);
+    const totalHours = Math.floor(totalMinutes / 60);
+    const days = Math.floor(totalHours / 24);
+    const remainingHours = totalHours % 24;
+
+    let primary = '';
+    if (days > 0) {
+      primary = `${days} day${days > 1 ? 's' : ''}`;
+      if (remainingHours > 0) {
+        primary += ` ${remainingHours} hr${remainingHours > 1 ? 's' : ''}`;
+      }
+    } else {
+      primary = `${totalHours} hr${totalHours > 1 ? 's' : ''}`;
+      const remainingMins = totalMinutes % 60;
+      if (remainingMins > 0) {
+        primary += ` ${remainingMins} min${remainingMins > 1 ? 's' : ''}`;
+      }
+    }
+
+    const secondary = `${totalHours} hour${totalHours !== 1 ? 's' : ''} total`;
+    return { primary, secondary };
+  };
+
+  const getVenueDetails = (venueStr) => {
+    if (!venueStr) return { primary: 'Main Campus Hall', secondary: '' };
+    const parts = venueStr.split(',');
+    const primary = parts[0]?.trim() || 'Main Campus Hall';
+    const secondary = parts.slice(1).join(',')?.trim() || '';
+    return { primary, secondary };
   };
 
   const handleLogoutRequest = () => {
@@ -321,85 +386,206 @@ const StudentDashboard = () => {
       </main>
 
       {selectedReg && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-slate-950 shadow-2xl">
-            <div className="relative h-[280px] sm:h-[340px]">
-              <img
-                src={selectedReg.events.image_url || 'https://via.placeholder.com/1200'}
-                alt={selectedReg.events.title}
-                className="h-full w-full object-cover"
-              />
-              <div className="absolute inset-0 bg-linear-to-t from-slate-950 via-slate-950/40 to-slate-900/20" />
-              <div className="absolute inset-0 flex flex-col justify-between p-5 sm:p-8">
-                <div className="flex items-start justify-between">
-                  <button
-                    onClick={() => setSelectedReg(null)}
-                    className="rounded-full bg-black/35 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-black/55"
-                  >
-                    Back to dashboard
-                  </button>
-                  <button
-                    onClick={() => setSelectedReg(null)}
-                    className="rounded-full bg-black/35 p-2 text-white transition hover:bg-black/55"
-                    aria-label="Close modal"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
+        <div className="fixed inset-0 z-50 flex flex-col lg:flex-row bg-[#060b13] overflow-hidden">
+          
+          {/* Background Image with Gradient Overlay */}
+          <div className="absolute inset-0 z-0 pointer-events-none">
+            <img
+              src={selectedReg.events.image_url || 'https://via.placeholder.com/1200'}
+              alt=""
+              className="h-full w-full object-cover filter blur-xs scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#060b13]/95 via-[#060b13]/60 to-[#060b13]/40 lg:bg-gradient-to-r lg:from-[#060b13]/85 lg:via-[#060b13]/55 lg:to-[#060b13]/65 backdrop-blur-[2px]" />
+          </div>
 
-                <div className="grid gap-4 lg:grid-cols-[1fr_360px] lg:items-end">
-                  <div className="text-white">
-                    <div className="mb-3 flex flex-wrap gap-2">
-                      {(selectedReg.events.categories?.length ? selectedReg.events.categories : ['General']).slice(0, 3).map((cat, i) => (
-                        <span
-                          key={i}
-                          className="rounded-full border border-white/20 bg-black/35 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide backdrop-blur"
-                        >
-                          {cat}
-                        </span>
-                      ))}
-                      <span className="rounded-full bg-unity-yellow px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-unity-navy">
-                        Active
-                      </span>
-                    </div>
-                    <h2 className="text-3xl font-black leading-tight sm:text-5xl">{selectedReg.events.title || 'Untitled Event'}</h2>
-                    <p className="mt-2 text-sm text-white/80">
-                      <MapPin size={14} className="mr-1 inline text-unity-yellow" />
-                      {selectedReg.events.venue || 'Main Campus Hall'}
-                    </p>
-                  </div>
+          {/* Absolute Position Controls Header */}
+          <div className="absolute top-6 left-6 right-6 z-20 flex items-center justify-between pointer-events-none">
+            <button
+              onClick={() => setSelectedReg(null)}
+              className="pointer-events-auto flex items-center gap-2 rounded-full bg-black/45 border border-white/10 px-4 py-2 text-xs font-semibold text-white tracking-wide transition hover:bg-black/60 hover:border-white/20 active:scale-[0.97]"
+            >
+              <ArrowLeft size={14} className="text-white" /> Back to dashboard
+            </button>
+            <button
+              onClick={() => setSelectedReg(null)}
+              className="pointer-events-auto rounded-full bg-black/45 border border-white/10 p-2 text-white transition hover:bg-black/60 hover:border-white/20 active:scale-[0.97]"
+              aria-label="Close modal"
+            >
+              <X size={18} />
+            </button>
+          </div>
 
-                  <div className="rounded-2xl border border-white/15 bg-slate-950/75 p-4 text-white shadow-lg backdrop-blur-sm">
-                    <div className="space-y-2.5 text-[13px]">
-                      <InfoRow
-                        label="When"
-                        value={`${formatDate(selectedReg.events.start_datetime)} ${formatTime(selectedReg.events.start_datetime)} - ${formatDate(selectedReg.events.end_datetime)} ${formatTime(selectedReg.events.end_datetime)}`}
-                      />
-                      <InfoRow
-                        label="Duration"
-                        value={getEventDuration(selectedReg.events.start_datetime, selectedReg.events.end_datetime)}
-                      />
-                      <InfoRow label="Venue" value={selectedReg.events.venue || 'Main Campus Hall'} />
-                    </div>
-                    <button
-                      disabled={isCancelling}
-                      onClick={() => handleCancelRegistration(selectedReg.id)}
-                      className="mt-4 w-full rounded-xl bg-rose-500 py-3 text-xs font-black uppercase tracking-[0.2em] text-white transition hover:bg-rose-600 disabled:opacity-60"
-                    >
-                      {isCancelling ? 'Cancelling...' : 'Cancel Registration'}
-                    </button>
-                  </div>
-                </div>
+          {/* Left Content Column */}
+          <div className="relative z-10 flex-1 flex flex-col justify-start gap-8 text-white p-6 sm:p-8 lg:p-16 pt-24 lg:pt-28 max-w-4xl">
+            <div>
+              {/* Badges */}
+              <div className="flex flex-wrap gap-2 items-center mb-5">
+                {(selectedReg.events.categories?.length ? selectedReg.events.categories : ['General']).slice(0, 3).map((cat, i) => (
+                  <span
+                    key={i}
+                    className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-200 backdrop-blur-sm"
+                  >
+                    {cat}
+                  </span>
+                ))}
+                <span className="rounded-full bg-emerald-500 text-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md">
+                  <Trophy size={11} className="fill-white stroke-white" /> Active
+                </span>
               </div>
-            </div>
 
-            <div className="bg-slate-50 px-6 py-8 sm:px-10">
-              <h3 className="mb-3 text-2xl font-bold text-slate-900">About this event</h3>
-              <p className="max-w-4xl leading-relaxed text-slate-600">
-                Event details are available in the event discovery page. This registration is currently active.
+              {/* Event Title */}
+              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] text-white">
+                {selectedReg.events.title || 'Untitled Event'}
+              </h2>
+
+              {/* Organized By */}
+              <p className="flex items-center gap-2 text-xs sm:text-sm text-slate-300 font-medium mt-4 mb-6">
+                <MapPin size={16} className="text-emerald-400 shrink-0" />
+                <span>Organized by <strong className="text-white">Unity University</strong></span>
+              </p>
+
+              {/* Event Description (Directly under the title) */}
+              <p className="text-base text-slate-200 leading-relaxed whitespace-pre-line max-w-3xl">
+                {selectedReg.events.description || 'No description provided for this event.'}
               </p>
             </div>
           </div>
+
+          {/* Right Sidebar Column */}
+          <div className="relative z-10 w-full lg:w-[420px] p-6 sm:p-8 lg:p-12 lg:pl-0 shrink-0 flex flex-col justify-center">
+            <div className="w-full rounded-3xl border border-white/10 bg-[#070e1e]/90 backdrop-blur-md p-6 sm:p-8 flex flex-col gap-6 shadow-2xl relative overflow-hidden">
+              <div className="flex flex-col gap-5">
+                {/* STARTS */}
+                <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                    <CalendarDays size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Starts</p>
+                    <p className="text-sm font-semibold text-white">{formatEventDateLong(selectedReg.events.start_datetime)}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{formatEventTime(selectedReg.events.start_datetime)}</p>
+                  </div>
+                </div>
+
+                {/* ENDS */}
+                <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                    <CalendarDays size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Ends</p>
+                    <p className="text-sm font-semibold text-white">{formatEventDateLong(selectedReg.events.end_datetime)}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{formatEventTime(selectedReg.events.end_datetime)}</p>
+                  </div>
+                </div>
+
+                {/* DURATION */}
+                {(() => {
+                  const dur = getDurationDetails(selectedReg.events.start_datetime, selectedReg.events.end_datetime);
+                  return (
+                    <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
+                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                        <Clock size={18} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Duration</p>
+                        <p className="text-sm font-semibold text-white">{dur.primary}</p>
+                        {dur.secondary && <p className="text-[11px] text-slate-400 mt-0.5">{dur.secondary}</p>}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* VENUE */}
+                {(() => {
+                  const venueInfo = getVenueDetails(selectedReg.events.venue);
+                  return (
+                    <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
+                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                        <MapPin size={18} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Venue</p>
+                        <p className="text-sm font-semibold text-white break-words">{venueInfo.primary}</p>
+                        {venueInfo.secondary && <p className="text-[11px] text-slate-400 mt-0.5 break-words">{venueInfo.secondary}</p>}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* CAPACITY */}
+                {(() => {
+                  const regCount = selectedReg.events.registrations?.[0]?.count || 0;
+                  const capacity = selectedReg.events.capacity;
+                  return (
+                    <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
+                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                        <Users size={18} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Capacity</p>
+                        {capacity != null && capacity !== '' ? (
+                          <>
+                            <p className="text-sm font-semibold text-white">
+                              {Math.max(0, capacity - regCount)} spots left
+                            </p>
+                            <div className="mt-2 flex items-center justify-between gap-4">
+                              <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden">
+                                <div
+                                  className="h-full bg-unity-yellow rounded-full transition-all duration-500"
+                                  style={{
+                                    width: `${Math.min(100, Math.max(0, (regCount / capacity) * 100))}%`
+                                  }}
+                                />
+                              </div>
+                              <span className="text-[11px] font-bold text-slate-400 shrink-0">
+                                {regCount}/{capacity}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-semibold text-white">Unlimited spots available</p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">{regCount} registered</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* REGISTRATION DEADLINE */}
+                <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                    <CalendarDays size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Registration Deadline</p>
+                    <p className="text-sm font-semibold text-white">
+                      {formatEventDateLong(selectedReg.events.registration_deadline)}
+                    </p>
+                    {selectedReg.events.registration_deadline && (
+                      <p className="text-[11px] text-slate-400 mt-0.5">{formatEventTime(selectedReg.events.registration_deadline)}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <button
+                  disabled={isCancelling}
+                  onClick={() => handleCancelRegistration(selectedReg.id)}
+                  className="w-full rounded-xl bg-rose-500 hover:bg-rose-600 text-white py-3.5 text-xs font-black uppercase tracking-[0.2em] transition duration-200 active:scale-[0.98] disabled:opacity-60 shadow-lg shadow-rose-500/10 cursor-pointer"
+                >
+                  {isCancelling ? 'Cancelling...' : 'Cancel Registration'}
+                </button>
+                <p className="text-center text-[10px] text-slate-500 mt-2">
+                  Free for Unity University students
+                </p>
+              </div>
+            </div>
+          </div>
+
         </div>
       )}
     </div>
