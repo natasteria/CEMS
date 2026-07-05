@@ -571,12 +571,12 @@ const EventDiscovery = () => {
             </div>
 
             {/* Right Sidebar Column */}
-            <div className="relative z-10 w-full lg:w-[420px] p-6 sm:p-8 lg:p-12 lg:pl-0 shrink-0 flex flex-col justify-center">
-              <div className="w-full rounded-3xl border border-white/10 bg-[#070e1e]/90 backdrop-blur-md p-6 sm:p-8 flex flex-col gap-6 shadow-2xl relative overflow-hidden">
-                <div className="flex flex-col gap-5">
+            <div className="relative z-10 w-full lg:w-[450px] p-4 sm:p-6 lg:py-4 lg:pr-10 lg:pl-0 shrink-0 flex flex-col justify-center h-full">
+              <div className="w-full rounded-3xl border border-white/10 bg-[#070e1e]/90 backdrop-blur-md pl-5 pr-8 py-4 sm:pl-6 sm:pr-12 sm:py-5 flex flex-col gap-3 shadow-2xl relative">
+                <div className="flex flex-col gap-3">
                   {/* STARTS */}
-                  <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                  <div className="flex items-start gap-3 border-b border-white/5 pb-3 last:border-none last:pb-0">
+                    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 border border-white/10 text-unity-yellow">
                       <CalendarDays size={18} />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -587,8 +587,8 @@ const EventDiscovery = () => {
                   </div>
 
                   {/* ENDS */}
-                  <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                  <div className="flex items-start gap-3 border-b border-white/5 pb-3 last:border-none last:pb-0">
+                    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 border border-white/10 text-unity-yellow">
                       <CalendarDays size={18} />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -602,8 +602,8 @@ const EventDiscovery = () => {
                   {(() => {
                     const dur = getDurationDetails(selectedEvent.start_datetime, selectedEvent.end_datetime);
                     return (
-                      <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
-                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                      <div className="flex items-start gap-3 border-b border-white/5 pb-3 last:border-none last:pb-0">
+                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 border border-white/10 text-unity-yellow">
                           <Clock size={18} />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -619,8 +619,8 @@ const EventDiscovery = () => {
                   {(() => {
                     const venueInfo = getVenueDetails(selectedEvent.venue || selectedEvent.location);
                     return (
-                      <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
-                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                      <div className="flex items-start gap-3 border-b border-white/5 pb-3 last:border-none last:pb-0">
+                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 border border-white/10 text-unity-yellow">
                           <MapPin size={18} />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -633,8 +633,8 @@ const EventDiscovery = () => {
                   })()}
 
                   {/* CAPACITY */}
-                  <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                  <div className="flex items-start gap-3 border-b border-white/5 pb-3 last:border-none last:pb-0">
+                    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 border border-white/10 text-unity-yellow">
                       <Users size={18} />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -644,7 +644,7 @@ const EventDiscovery = () => {
                           <p className="text-sm font-semibold text-white">
                             {Math.max(0, selectedEvent.capacity - (selectedEvent.regCount || 0))} spots left
                           </p>
-                          <div className="mt-2 flex items-center justify-between gap-4">
+                          <div className="mt-1 flex items-center justify-between gap-4">
                             <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden">
                               <div
                                 className="h-full bg-unity-yellow rounded-full transition-all duration-500"
@@ -668,8 +668,8 @@ const EventDiscovery = () => {
                   </div>
 
                   {/* REGISTRATION DEADLINE */}
-                  <div className="flex items-start gap-4 border-b border-white/5 pb-4 last:border-none last:pb-0">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 border border-white/10 text-unity-yellow">
+                  <div className="flex items-start gap-3 border-b border-white/5 pb-3 last:border-none last:pb-0">
+                    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 border border-white/10 text-unity-yellow">
                       <CalendarDays size={18} />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -685,16 +685,16 @@ const EventDiscovery = () => {
                 </div>
 
                 {myRegs.includes(selectedEvent.id) ? (
-                  <div className="mt-4">
+                  <div className="mt-2">
                     <div className="w-full rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-3.5 text-center text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
                       Registered
                     </div>
-                    <p className="text-center text-[10px] text-slate-500 mt-2">
+                    <p className="text-center text-[10px] text-slate-500 mt-1">
                       You are signed up for this event
                     </p>
                   </div>
                 ) : (
-                  <div className="mt-4">
+                  <div className="mt-2">
                     <button
                       disabled={isRegistering}
                       onClick={() => handleRegister(selectedEvent)}
