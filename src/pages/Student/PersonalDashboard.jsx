@@ -47,7 +47,8 @@ const StudentDashboard = () => {
             id,
             events (
               id, title, venue, start_datetime, end_datetime, categories, image_url, description, capacity, registration_deadline,
-              registrations(count)
+              registrations(count),
+              organizers(organizer_name)
             )
           `)
           .eq('student_id', user.id);
@@ -222,7 +223,67 @@ const StudentDashboard = () => {
   const initials = `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
 
   return (
-    <div className="min-h-screen bg-slate-100 font-sans text-slate-900">
+    <div className="relative min-h-screen overflow-hidden bg-slate-100 font-sans text-slate-900">
+
+      {/* Left Decorative Honeycomb Background */}
+      <div className="fixed top-0 left-0 bottom-0 w-24 sm:w-32 md:w-48 lg:w-64 pointer-events-none z-0 overflow-hidden select-none">
+        {/* Honeycomb Pattern */}
+        <div className="absolute inset-0 opacity-[0.07]">
+          <svg className="h-full w-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="honeycomb-left" width="56" height="97" patternUnits="userSpaceOnUse">
+                <path d="M28,0 L56,16 L56,48 L28,64 L0,48 L0,16 Z" fill="none" stroke="#0f1f52" strokeWidth="1" />
+                <path d="M28,97 L56,81 L56,48 L28,32 L0,48 L0,81 Z" fill="none" stroke="#0f1f52" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#honeycomb-left)" />
+          </svg>
+        </div>
+        {/* Fade Mask */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-100/40 to-slate-100 z-10" />
+        
+        {/* Floating Hexagons */}
+        <div className="absolute top-[20%] left-[-20px] w-24 h-28 opacity-[0.06] text-[#0f1f52] animate-pulse" style={{ animationDuration: '6s' }}>
+          <svg viewBox="0 0 90 104" className="w-full h-full fill-current">
+            <path d="M45,0 L90,26 L90,78 L45,104 L0,78 L0,26 Z" />
+          </svg>
+        </div>
+        <div className="absolute top-[60%] left-[20px] w-16 h-20 opacity-[0.04] text-[#facc15] animate-pulse" style={{ animationDuration: '8s' }}>
+          <svg viewBox="0 0 90 104" className="w-full h-full fill-current">
+            <path d="M45,0 L90,26 L90,78 L45,104 L0,78 L0,26 Z" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Right Decorative Honeycomb Background */}
+      <div className="fixed top-0 right-0 bottom-0 w-24 sm:w-32 md:w-48 lg:w-64 pointer-events-none z-0 overflow-hidden select-none">
+        {/* Honeycomb Pattern */}
+        <div className="absolute inset-0 opacity-[0.07]">
+          <svg className="h-full w-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="honeycomb-right" width="56" height="97" patternUnits="userSpaceOnUse">
+                <path d="M28,0 L56,16 L56,48 L28,64 L0,48 L0,16 Z" fill="none" stroke="#0f1f52" strokeWidth="1" />
+                <path d="M28,97 L56,81 L56,48 L28,32 L0,48 L0,81 Z" fill="none" stroke="#0f1f52" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#honeycomb-right)" />
+          </svg>
+        </div>
+        {/* Fade Mask */}
+        <div className="absolute inset-0 bg-gradient-to-l from-transparent via-slate-100/40 to-slate-100 z-10" />
+
+        {/* Floating Hexagons */}
+        <div className="absolute top-[40%] right-[-10px] w-20 h-24 opacity-[0.05] text-[#0f1f52] animate-pulse" style={{ animationDuration: '7s' }}>
+          <svg viewBox="0 0 90 104" className="w-full h-full fill-current">
+            <path d="M45,0 L90,26 L90,78 L45,104 L0,78 L0,26 Z" />
+          </svg>
+        </div>
+        <div className="absolute top-[80%] right-[30px] w-12 h-14 opacity-[0.05] text-[#facc15] animate-pulse" style={{ animationDuration: '9s' }}>
+          <svg viewBox="0 0 90 104" className="w-full h-full fill-current">
+            <path d="M45,0 L90,26 L90,78 L45,104 L0,78 L0,26 Z" />
+          </svg>
+        </div>
+      </div>
       <nav className="relative sticky top-0 z-50 border-b border-white/10 bg-[#0f1f52]/95 px-8 py-5 text-white backdrop-blur lg:px-12">
 
         {/* GRID OVERLAY */}
@@ -441,7 +502,7 @@ const StudentDashboard = () => {
               {/* Organized By */}
               <p className="flex items-center gap-2 text-xs sm:text-sm text-slate-300 font-medium mt-4 mb-6">
                 <MapPin size={16} className="text-emerald-400 shrink-0" />
-                <span>Organized by <strong className="text-white">Unity University</strong></span>
+                <span>Organized by <strong className="text-white">{selectedReg.events.organizers?.organizer_name || 'Unknown Organizer'}</strong></span>
               </p>
 
               {/* Event Description (Directly under the title) */}
@@ -559,14 +620,18 @@ const StudentDashboard = () => {
                   <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 border border-white/10 text-unity-yellow">
                     <CalendarDays size={18} />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Registration Deadline</p>
-                    <p className="text-sm font-semibold text-white">
-                      {formatEventDateLong(selectedReg.events.registration_deadline)}
-                    </p>
-                    {selectedReg.events.registration_deadline && (
-                      <p className="text-[11px] text-slate-400 mt-0.5">{formatEventTime(selectedReg.events.registration_deadline)}</p>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Registration Deadline</p>
+                      {selectedReg.events.registration_deadline ? (
+                        <>
+                          <p className="text-sm font-semibold text-white">
+                            {formatEventDateLong(selectedReg.events.registration_deadline)}
+                          </p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">{formatEventTime(selectedReg.events.registration_deadline)}</p>
+                        </>
+                      ) : (
+                        <p className="text-sm font-semibold text-slate-300">No registration deadline set</p>
+                      )}
                   </div>
                 </div>
               </div>

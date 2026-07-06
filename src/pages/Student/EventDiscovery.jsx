@@ -112,7 +112,8 @@ const EventDiscovery = () => {
         .from('events')
         .select(`
         *,
-        registrations(count)
+        registrations(count),
+        organizers(organizer_name)
       `)
         .eq('status', 'approved')
         .is('deleted_at', null)
@@ -159,7 +160,8 @@ const EventDiscovery = () => {
           image: event.image_url || 'https://via.placeholder.com/800',
           registration_deadline: event.registration_deadline,
           capacity: event.capacity,
-          regCount
+          regCount,
+          organizer: event.organizers?.organizer_name || 'Unknown Organizer'
         };
       });
 
@@ -345,15 +347,86 @@ const EventDiscovery = () => {
   return (
     <div className="relative min-h-screen overflow-hidden bg-white font-sans text-slate-900">
 
-      {/* FULL PAGE GRID */}
-      {/* <div
-      className="pointer-events-none absolute inset-0"
-      style={{
-        backgroundImage:
-          'linear-gradient(to right, rgba(19, 42, 92, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(19, 42, 92, 0.05) 1px, transparent 1px)',
-        backgroundSize: '40px 40px'
-      }}
-    /> */}
+      {/* Left Decorative Honeycomb Background */}
+      <div className="fixed top-0 left-0 bottom-0 w-24 sm:w-32 md:w-48 lg:w-64 pointer-events-none z-0 overflow-hidden select-none">
+        {/* Honeycomb Pattern */}
+        <div className="absolute inset-0 opacity-[0.07]">
+          <svg className="h-full w-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="honeycomb-left" width="56" height="97" patternUnits="userSpaceOnUse">
+                <path d="M28,0 L56,16 L56,48 L28,64 L0,48 L0,16 Z" fill="none" stroke="#233f9c" strokeWidth="1" />
+                <path d="M28,97 L56,81 L56,48 L28,32 L0,48 L0,81 Z" fill="none" stroke="#233f9c" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#honeycomb-left)" />
+          </svg>
+        </div>
+        {/* Fade Mask */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-white z-10" />
+        
+        {/* Floating Hexagons */}
+        <div className="absolute top-[20%] left-[-20px] w-24 h-28 opacity-[0.06] text-[#233f9c] animate-pulse" style={{ animationDuration: '6s' }}>
+          <svg viewBox="0 0 90 104" className="w-full h-full fill-current">
+            <path d="M45,0 L90,26 L90,78 L45,104 L0,78 L0,26 Z" />
+          </svg>
+        </div>
+        <div className="absolute top-[60%] left-[20px] w-16 h-20 opacity-[0.04] text-[#facc15] animate-pulse" style={{ animationDuration: '8s' }}>
+          <svg viewBox="0 0 90 104" className="w-full h-full fill-current">
+            <path d="M45,0 L90,26 L90,78 L45,104 L0,78 L0,26 Z" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Right Decorative Honeycomb Background */}
+      <div className="fixed top-0 right-0 bottom-0 w-24 sm:w-32 md:w-48 lg:w-64 pointer-events-none z-0 overflow-hidden select-none">
+        {/* Honeycomb Pattern */}
+        <div className="absolute inset-0 opacity-[0.07]">
+          <svg className="h-full w-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="honeycomb-right" width="56" height="97" patternUnits="userSpaceOnUse">
+                <path d="M28,0 L56,16 L56,48 L28,64 L0,48 L0,16 Z" fill="none" stroke="#233f9c" strokeWidth="1" />
+                <path d="M28,97 L56,81 L56,48 L28,32 L0,48 L0,81 Z" fill="none" stroke="#233f9c" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#honeycomb-right)" />
+          </svg>
+        </div>
+        {/* Fade Mask */}
+        <div className="absolute inset-0 bg-gradient-to-l from-transparent via-white/40 to-white z-10" />
+
+        {/* Floating Hexagons */}
+        <div className="absolute top-[40%] right-[-10px] w-20 h-24 opacity-[0.05] text-[#233f9c] animate-pulse" style={{ animationDuration: '7s' }}>
+          <svg viewBox="0 0 90 104" className="w-full h-full fill-current">
+            <path d="M45,0 L90,26 L90,78 L45,104 L0,78 L0,26 Z" />
+          </svg>
+        </div>
+        <div className="absolute top-[80%] right-[30px] w-12 h-14 opacity-[0.05] text-[#facc15] animate-pulse" style={{ animationDuration: '9s' }}>
+          <svg viewBox="0 0 90 104" className="w-full h-full fill-current">
+            <path d="M45,0 L90,26 L90,78 L45,104 L0,78 L0,26 Z" />
+          </svg>
+        </div>
+      </div>
+
+      {/* FULL PAGE CUBE/HONEYCOMB GRID MESH */}
+      <div className="pointer-events-none absolute inset-0 z-0 select-none">
+        <svg className="h-full w-full opacity-65" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="curated-mesh" width="120" height="104" patternUnits="userSpaceOnUse">
+              {/* Horizontal lines */}
+              <line x1="0" y1="0" x2="120" y2="0" stroke="#233f9c" strokeWidth="0.8" strokeOpacity="0.05" />
+              <line x1="0" y1="52" x2="120" y2="52" stroke="#233f9c" strokeWidth="0.8" strokeOpacity="0.05" />
+              {/* Vertical lines */}
+              <line x1="30" y1="0" x2="30" y2="104" stroke="#233f9c" strokeWidth="0.8" strokeOpacity="0.05" />
+              <line x1="90" y1="0" x2="90" y2="104" stroke="#233f9c" strokeWidth="0.8" strokeOpacity="0.05" />
+              {/* Diagonal 30 degrees */}
+              <path d="M0,26 L90,78 M30,0 L120,52 M0,78 L45,104 M75,0 L120,26" stroke="#233f9c" strokeWidth="1" strokeOpacity="0.09" />
+              {/* Diagonal 150 degrees */}
+              <path d="M120,26 L30,78 M90,0 L0,52 M120,78 L75,104 M45,0 L0,26" stroke="#233f9c" strokeWidth="1" strokeOpacity="0.09" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#curated-mesh)" />
+        </svg>
+      </div>
 
       <div className="relative z-10">
         <header className="bg-[#233f9c] border-b border-white/10 px-4 pb-8 pt-6 sm:px-8 lg:px-12">
@@ -674,11 +747,15 @@ const EventDiscovery = () => {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-[#facc15] mb-0.5">Registration Deadline</p>
-                      <p className="text-sm font-semibold text-white">
-                        {formatEventDateLong(selectedEvent.registration_deadline)}
-                      </p>
-                      {selectedEvent.registration_deadline && (
-                        <p className="text-[11px] text-slate-400 mt-0.5">{formatEventTime(selectedEvent.registration_deadline)}</p>
+                      {selectedEvent.registration_deadline ? (
+                        <>
+                          <p className="text-sm font-semibold text-white">
+                            {formatEventDateLong(selectedEvent.registration_deadline)}
+                          </p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">{formatEventTime(selectedEvent.registration_deadline)}</p>
+                        </>
+                      ) : (
+                        <p className="text-sm font-semibold text-slate-300">No registration deadline set</p>
                       )}
                     </div>
                   </div>
@@ -764,20 +841,6 @@ const EventCard = ({ event, onViewDetails }) => (
 
     <div className="absolute inset-x-0 bottom-0 p-4 text-white sm:p-5">
       <h3 className="line-clamp-2 text-2xl font-black leading-tight">{event.title}</h3>
-      <p className="mt-2 text-[12px] text-white/90">
-        <span className="inline-flex items-center gap-1.5">
-          <Calendar size={13} className="text-unity-yellow" />
-          {event.date} {event.time}
-          {event.endDate && event.endTime ? `, ${event.endDate} ${event.endTime}` : ''}
-        </span>
-      </p>
-      <p className="mt-1 inline-flex min-w-0 items-center gap-1.5 text-[12px] text-white/85">
-        <MapPin size={13} className="shrink-0 text-unity-yellow" />
-        <span className="truncate">{event.location}</span>
-      </p>
-      <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-white/80">
-        {event.description || 'No description provided.'}
-      </p>
       <div className="mt-4 flex flex-wrap gap-2">
         {event.categories.slice(0, 3).map((cat, index) => (
           <span
