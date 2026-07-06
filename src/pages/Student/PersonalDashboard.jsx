@@ -240,7 +240,7 @@ const StudentDashboard = () => {
           </svg>
         </div>
         {/* Fade Mask */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-100/40 to-slate-100 z-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-100 via-slate-100/40 to-transparent z-10" />
         
         {/* Floating Hexagons */}
         <div className="absolute top-[20%] left-[-20px] w-24 h-28 opacity-[0.06] text-[#0f1f52] animate-pulse" style={{ animationDuration: '6s' }}>
@@ -270,7 +270,7 @@ const StudentDashboard = () => {
           </svg>
         </div>
         {/* Fade Mask */}
-        <div className="absolute inset-0 bg-gradient-to-l from-transparent via-slate-100/40 to-slate-100 z-10" />
+        <div className="absolute inset-0 bg-gradient-to-l from-slate-100 via-slate-100/40 to-transparent z-10" />
 
         {/* Floating Hexagons */}
         <div className="absolute top-[40%] right-[-10px] w-20 h-24 opacity-[0.05] text-[#0f1f52] animate-pulse" style={{ animationDuration: '7s' }}>
