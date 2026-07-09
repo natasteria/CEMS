@@ -117,6 +117,7 @@ const EventDiscovery = () => {
       `)
         .eq('status', 'approved')
         .is('deleted_at', null)
+        .is('deleted_by', null)
         .gt('start_datetime', new Date().toISOString())
         .or(`registration_deadline.is.null,registration_deadline.gt.${new Date().toISOString()}`)
         .order('start_datetime', { ascending: true });

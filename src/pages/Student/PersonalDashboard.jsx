@@ -45,22 +45,28 @@ const StudentDashboard = () => {
           .from('registrations')
           .select(`
             id,
-            events (
+            events!inner (
               id, title, venue, start_datetime, end_datetime, categories, image_url, description, capacity, registration_deadline,
+              deleted_at,
+              deleted_by,
               registrations(count),
               organizers(organizer_name)
             )
           `)
-          .eq('student_id', user.id);
+          .eq('student_id', user.id)
+          .is('events.deleted_at', null)
+          .is('events.deleted_by', null);
 
         const active = [];
         const past = [];
 
         allRegs?.forEach(reg => {
-          if (new Date(reg.events.end_datetime) > now) {
-            active.push(reg);
-          } else {
-            past.push(reg);
+          if (reg.events && reg.events.deleted_at === null && reg.events.deleted_by === null) {
+            if (new Date(reg.events.end_datetime) > now) {
+              active.push(reg);
+            } else {
+              past.push(reg);
+            }
           }
         });
 
