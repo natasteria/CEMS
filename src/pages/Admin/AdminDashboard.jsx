@@ -16,6 +16,7 @@ const AdminDashboard = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
 
@@ -142,8 +143,8 @@ const AdminDashboard = () => {
             {adminProfile.email}
           </p>
 
-          <div className="flex items-center gap-2 mt-2 text-xs text-white/60">
-            <Shield size={14} />
+          <div className="flex items-center gap-2 mt-2 text-base font-medium text-[#facc15]">
+            <Shield size={18} />
             Administrator
           </div>
 
@@ -215,7 +216,7 @@ const AdminDashboard = () => {
             Profile
           </button>
           
-          <button onClick={handleLogout} className="flex items-center gap-3 p-3 text-red-300 hover:bg-red-500/10 rounded-xl transition-all font-bold text-sm">
+          <button onClick={() => setShowLogoutConfirm(true)} className="flex items-center gap-3 p-3 text-red-300 hover:bg-red-500/10 rounded-xl transition-all font-bold text-sm">
             <LogOut size={18} /> Logout
           </button>
         </div>
@@ -228,6 +229,35 @@ const AdminDashboard = () => {
         {renderContent()}
 
       </main>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <LogOut className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 mb-2">Confirm Logout</h3>
+              <p className="text-sm text-slate-500 mb-6">Are you sure you want to log out of your session?</p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleLogout}
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors shadow-sm shadow-red-200"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

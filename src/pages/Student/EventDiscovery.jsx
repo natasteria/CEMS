@@ -539,16 +539,16 @@ const EventDiscovery = () => {
 
         <main className="relative mx-auto max-w-7xl px-4 pb-12 pt-6 sm:px-8 lg:px-12">
 
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-600">
-                Curated events
+              <p className="text-xs font-bold uppercase tracking-[0.2em] bg-gradient-to-r from-unity-yellow via-amber-400 to-orange-500 bg-clip-text text-transparent animate-gradient-x mb-1">
+                Curated Events
               </p>
-              <h2 className="text-2xl font-bold text-slate-900">
+              <h2 className="text-3xl sm:text-3xl font-extrabold bg-gradient-to-r from-slate-900 via-[#1d3a8a] to-slate-900 bg-clip-text text-transparent animate-gradient-x">
                 Featured picks for you
               </h2>
             </div>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm font-medium text-slate-500 bg-slate-100 px-4 py-2 rounded-full border border-slate-200 shadow-sm shrink-0">
               {loadingEvents ? 'Loading events...' : `${filteredEvents.length} events found`}
             </p>
           </div>
