@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "../../../lib/supabaseClient";
-import { Check, X, RefreshCw } from "lucide-react";
+import { Check, X, RefreshCw, Loader2 } from "lucide-react";
 import { useNotification } from "../../../context/NotificationContext";
 
 const PendingOrganizers = () => {
@@ -89,13 +89,20 @@ const PendingOrganizers = () => {
   };
 
   if (loading) {
-    return <div className="p-8 text-slate-500">Loading pending organizers...</div>;
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="w-8 h-8 animate-spin text-[#003366]" />
+      </div>
+    );
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-[#0F172A]">Pending Organizers</h1>
+    <div className="flex-1 min-h-screen font-sans">
+      <div className="flex justify-between items-end mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-[#0f172a]">Pending Organizers</h1>
+          <p className="text-gray-500 text-sm mt-1">Review and approve new organizer applications.</p>
+        </div>
         
         {/* Manual Refresh Button */}
         <button
@@ -108,51 +115,61 @@ const PendingOrganizers = () => {
         </button>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-slate-200 rounded-2xl shadow-sm">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-50 text-left text-sm font-semibold text-slate-600">
-              <th className="px-6 py-3 border-b">Organizer Name</th>
-              <th className="px-6 py-3 border-b">Primary Contact</th>
-              <th className="px-6 py-3 border-b">Organizer Type</th>
-              <th className="px-6 py-3 border-b">Email</th>
-              <th className="px-6 py-3 border-b">Applied At</th>
-              <th className="px-6 py-3 border-b">Actions</th>
+            <tr className="bg-gray-50/50 text-[11px] uppercase tracking-wider text-gray-500 border-b border-gray-100">
+              <th className="px-6 py-4 font-semibold">Organizer</th>
+              <th className="px-6 py-4 font-semibold">Contact Info</th>
+              <th className="px-6 py-4 font-semibold">Type</th>
+              <th className="px-6 py-4 font-semibold">Applied At</th>
+              <th className="px-6 py-4 font-semibold text-right">Actions</th>
             </tr>
           </thead>
 
-          <tbody>
+          <tbody className="divide-y divide-gray-50">
             {organizers.length === 0 ? (
               <tr>
-                <td colSpan="6" className="text-center py-6 text-slate-500">
+                <td colSpan="5" className="text-center py-8 text-slate-500 text-sm">
                   No pending organizers
                 </td>
               </tr>
             ) : (
               organizers.map((org) => (
-                <tr key={org.id} className="hover:bg-slate-50 border-b">
-                  <td className="px-6 py-4 text-slate-700 font-medium">{org.organizer_name}</td>
-                  <td className="px-6 py-4 text-slate-700">{org.primary_contact}</td>
-                  <td className="px-6 py-4 text-slate-700">{org.organizer_type}</td>
-                  <td className="px-6 py-4 text-slate-700">{org.email}</td>
-                  <td className="px-6 py-4 text-slate-500">
-                    {new Date(org.applied_at).toLocaleString()}
+                <tr key={org.id} className="group hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="font-semibold text-[#0f172a]">{org.organizer_name}</div>
+                    <div className="text-[10px] text-gray-400 font-mono">#{org.id?.slice(0,8)}</div>
                   </td>
-                  <td className="px-6 py-4 flex gap-2">
-                    <button
-                      onClick={() => handleAction(org.id, "approved")}
-                      disabled={actionLoading === org.id}
-                      className="flex items-center gap-1 px-3 py-1 text-sm font-medium text-white bg-green-500 rounded-lg hover:bg-green-600 disabled:opacity-50"
-                    >
-                      <Check size={16} /> Approve
-                    </button>
-                    <button
-                      onClick={() => handleAction(org.id, "rejected")}
-                      disabled={actionLoading === org.id}
-                      className="flex items-center gap-1 px-3 py-1 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 disabled:opacity-50"
-                    >
-                      <X size={16} /> Reject
-                    </button>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    <div className="font-medium">{org.primary_contact}</div>
+                    <div className="text-[11px] text-slate-400">{org.email}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="px-3 py-1 rounded-full text-[10px] font-bold border bg-gray-100 text-gray-700 border-gray-200 uppercase">
+                      {org.organizer_type}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    {new Date(org.applied_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleAction(org.id, "approved")}
+                        disabled={actionLoading === org.id}
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#0f172a] bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                      >
+                        <Check size={14} className="text-emerald-600" /> Approve
+                      </button>
+                      <button
+                        onClick={() => handleAction(org.id, "rejected")}
+                        disabled={actionLoading === org.id}
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-100 rounded-lg hover:bg-rose-100 disabled:opacity-50 transition-colors"
+                      >
+                        <X size={14} /> Reject
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

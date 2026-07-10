@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Calendar, MapPin, History, 
   CheckCircle, AlertCircle, 
-  Search, X, Trash2
+  Search, X, Trash2, RefreshCw
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 
@@ -20,6 +20,7 @@ const AdminEventManagement = () => {
   const [rejectionNote, setRejectionNote] = useState('');
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchEvents();
@@ -34,15 +35,20 @@ const AdminEventManagement = () => {
     setRejectionNote('');
   };
 
-  const fetchEvents = async () => {
-    const { data, error } = await supabase
-      .from('events')
-      .select(`*, organizers (organizer_name, profiles (first_name, last_name))`)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false });
+  const fetchEvents = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select(`*, organizers (organizer_name, profiles (first_name, last_name))`)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
 
-    if (error) return console.error(error);
-    setEvents(data);
+      if (error) return console.error(error);
+      setEvents(data);
+    } finally {
+      if (isRefresh) setRefreshing(false);
+    }
   };
 
   const fetchEventHistory = async (eventId) => {
@@ -178,10 +184,15 @@ const AdminEventManagement = () => {
           <h1 className="text-2xl font-bold text-[#0f172a]">Event Approvals</h1>
           <p className="text-gray-500 text-sm">Review and moderate incoming event submissions.</p>
         </div>
-        {/* <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input type="text" placeholder="Search events..." className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#facc15]" />
-        </div> */}
+        
+        <button
+          onClick={() => fetchEvents(true)}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+          Refresh
+        </button>
       </div>
 
       <div className="flex gap-6 border-b border-gray-200 mb-6">

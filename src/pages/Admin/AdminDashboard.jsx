@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { Loader2, User, Calendar, Users, Shield, LogOut } from 'lucide-react';
+import { Loader2, User, Calendar, Users, Shield, LogOut, BarChart3 } from 'lucide-react';
 
 // Pages that render inside main area
+import Overview from './DashBoardComponents/Overview';
 import AdminProfile from './DashBoardComponents/AdminProfile';
 import AdminEventManagment from './DashBoardComponents/AdminEventManagment';
 import PendingOrganizers from './DashBoardComponents/PendingOrganizers';
@@ -10,7 +11,7 @@ import PendingOrganizers from './DashBoardComponents/PendingOrganizers';
 
 const AdminDashboard = () => {
 
-  const [currentTab, setCurrentTab] = useState('profile');
+  const [currentTab, setCurrentTab] = useState('overview');
   const [adminProfile, setAdminProfile] = useState(null);
 
   const [loading, setLoading] = useState(true);
@@ -87,6 +88,9 @@ const AdminDashboard = () => {
 
     switch (currentTab) {
 
+      case 'overview':
+        return <Overview />;
+
       case 'profile':
         return <AdminProfile adminProfile={adminProfile} />;
 
@@ -100,7 +104,7 @@ const AdminDashboard = () => {
       //   return <ManageStudents />;
 
       default:
-        return <AdminProfile adminProfile={adminProfile} />;
+        return <Overview />;
     }
   };
 
@@ -149,15 +153,15 @@ const AdminDashboard = () => {
         <nav className="flex flex-col p-4 gap-2">
 
           <button
-            onClick={() => setCurrentTab('profile')}
+            onClick={() => setCurrentTab('overview')}
             className={`flex items-center gap-3 p-3 rounded-lg transition ${
-              currentTab === 'profile'
+              currentTab === 'overview'
                 ? 'bg-white text-[#003366]'
                 : 'hover:bg-white/10'
             }`}
           >
-            <User size={18} />
-            Profile
+            <BarChart3 size={18} />
+            Overview
           </button>
 
           <button
@@ -198,9 +202,23 @@ const AdminDashboard = () => {
 
         </nav>
 
-        <button onClick={handleLogout} className="mt-auto m-4 flex items-center gap-3 p-3 text-red-300 hover:bg-red-500/10 rounded-xl transition-all font-bold text-sm">
-          <LogOut size={18} /> Logout
-        </button>
+        <div className="mt-auto flex flex-col p-4 gap-2 border-t border-white/10">
+          <button
+            onClick={() => setCurrentTab('profile')}
+            className={`flex items-center gap-3 p-3 rounded-lg transition ${
+              currentTab === 'profile'
+                ? 'bg-white text-[#003366]'
+                : 'hover:bg-white/10'
+            }`}
+          >
+            <User size={18} />
+            Profile
+          </button>
+          
+          <button onClick={handleLogout} className="flex items-center gap-3 p-3 text-red-300 hover:bg-red-500/10 rounded-xl transition-all font-bold text-sm">
+            <LogOut size={18} /> Logout
+          </button>
+        </div>
 
       </aside>
 
